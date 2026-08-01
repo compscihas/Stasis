@@ -8,31 +8,9 @@
 // transition WITH the interactive edge-swipe-back gesture. A raw
 // PageRouteBuilder has no back-gesture machinery, so it silently kills
 // swipe-back on every pushed screen. This builder is therefore registered for
-// Android-likes ONLY; iOS/macOS use [StasisCupertinoPageTransitionsBuilder].
+// Android-likes ONLY; iOS/macOS keep CupertinoPageTransitionsBuilder.
 
-import 'package:flutter/cupertino.dart';
-
-/// A stable iOS/macOS page transition that does not depend on where Flutter
-/// exports `CupertinoPageTransitionsBuilder` in a given SDK release.
-class StasisCupertinoPageTransitionsBuilder extends PageTransitionsBuilder {
-  const StasisCupertinoPageTransitionsBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return CupertinoPageTransition(
-      primaryRouteAnimation: animation,
-      secondaryRouteAnimation: secondaryAnimation,
-      linearTransition: route.popGestureInProgress,
-      child: child,
-    );
-  }
-}
+import 'package:flutter/material.dart';
 
 /// Shared-axis fade-through: the incoming page fades in with a subtle rise
 /// while the outgoing one recedes — the app's warm, settled motion language.

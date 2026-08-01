@@ -26,8 +26,8 @@
 // [Palette] (not the live getters) so the light + dark ThemeData objects are
 // each internally consistent regardless of which mode is currently active.
 
-// The project-owned Cupertino transition in page_transitions.dart avoids an
-// SDK-version-sensitive Flutter export while preserving native iOS motion.
+// CupertinoPageTransitionsBuilder is exported by material.dart on the pinned
+// Flutter 3.41.6 toolchain. Keep the CI pin and this import contract aligned.
 import 'package:flutter/material.dart';
 import 'page_transitions.dart';
 import 'tokens.dart';
@@ -208,8 +208,8 @@ ThemeData buildOpenStrapTheme(Palette p) {
         TargetPlatform.fuchsia: SharedAxisPageTransitionsBuilder(),
         TargetPlatform.linux: SharedAxisPageTransitionsBuilder(),
         TargetPlatform.windows: SharedAxisPageTransitionsBuilder(),
-        TargetPlatform.iOS: StasisCupertinoPageTransitionsBuilder(),
-        TargetPlatform.macOS: StasisCupertinoPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
       },
     ),
   );
