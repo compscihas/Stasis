@@ -84,5 +84,6 @@ scratch_*
 **/scratch_test*.dart
 **/*_db2.dart
 /fetch_apps.js
-#adding firebase_options back so that we dont commit it accidentally in future releases
-lib/firebase_options.dart 
+# Real Firebase credentials stay outside source control. The committed
+# lib/firebase_options.dart is an inert, non-secret placeholder so local and CI
+# builds compile with Firebase disabled; replace it only in release automation.
