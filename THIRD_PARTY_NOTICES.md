@@ -1,3 +1,11 @@
+# Third-Party Notices
+
+Stasis AI is a derivative of OpenStrap Edge. Stasis-specific original
+contributions are not offered under the MIT License. Portions inherited from
+OpenStrap Edge remain available under, and must retain, the following notice:
+
+## OpenStrap Edge
+
 MIT License
 
 Copyright (c) 2026 OpenStrap
@@ -19,3 +27,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Additional dependencies, fonts, and bundled assets may carry their own license
+files and notices. Those terms continue to apply to their respective material.

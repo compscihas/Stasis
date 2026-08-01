@@ -71,6 +71,11 @@ No secrets, signing certificates, provisioning profiles, or private Firebase fil
 
 `openstrap_protocol`, `openstrap_analytics`, `openstrap.db`, schema/table/view names, migration identifiers, method-channel names, and native source/type names such as `OpenStrapWidget` remain where changing them could break stored data, protocol behavior, Flutter/native communication, WidgetKit state, or dependency imports. See [migration notes](guides/MIGRATION_FROM_OPENSTRAP.md).
 
-## License and attribution
+## Rights and attribution
 
-MIT licensed; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Original OpenStrap copyright and protocol/research attribution are preserved.
+Stasis-specific original contributions are not released under the MIT License.
+No permission to copy, modify, or redistribute those contributions is granted
+unless separately agreed in writing. Portions inherited from OpenStrap Edge
+remain subject to their original MIT terms; see
+[Third-Party Notices](THIRD_PARTY_NOTICES.md). Original OpenStrap copyright and
+protocol/research attribution are preserved.
