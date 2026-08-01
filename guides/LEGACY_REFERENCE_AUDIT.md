@@ -5,9 +5,9 @@ Generated after the Stasis AI fork changes on 1 August 2026.
 Interpretation:
 
 - Old Flutter package, bundle, Android application, and App Group identifiers: none remain.
-- Original cloud endpoints: no hardcoded data/telemetry endpoint remains. The sole original-project URL in app code is the MIT NOTICE attribution link listed below.
+- Original cloud endpoints: no hardcoded data/telemetry endpoint remains. Upstream project links remain only for compatibility and attribution.
 - `OpenStrapWidget*`, `OpenStrap*Attributes`, Xcode target/source names, method-channel names, `buildOpenStrapTheme`, and related test references are intentionally preserved compatibility symbols. Renaming them would couple a branding change to native bridge, ActivityKit/WidgetKit, or test behavior.
-- `openstrap_protocol`, `openstrap_analytics`, upstream GitHub links, LICENSE/NOTICE copyright, and contributor docs are intentionally preserved dependency and attribution references.
+- `openstrap_protocol`, `openstrap_analytics`, upstream GitHub links, third-party notices, and contributor docs are intentionally preserved dependency and attribution references.
 - `openstrap.db`, schema/migration names, and “OpenStrap Edge backup” wording are intentionally preserved for import/migration compatibility.
 - AGENTS.md and historical implementation comments describe the upstream architecture and are retained as engineering history.
 - Legacy `BACKEND_URL` is retained only for an explicitly configured one-time historical account import. Legacy `COMPANION_URL` source remains for compilation compatibility, but `CompanionClient.legacyTransportEnabled` is hardcoded false.
@@ -30,23 +30,23 @@ Interpretation:
 .\pubspec.yaml:51:      url: https://github.com/OpenStrap/analytics.git
 .\pubspec.yaml:52:      # PR-BRANCH HEAD, not main — OpenStrap/analytics#32 (fix/issue-170-...)
 .\pubspec.yaml:147:  # File picker for data imports (NOOP raw CSV, Edge .db backup, WHOOP export CSV).
-.\DONATE.md:3:Stasis AI is a private fork and does not collect donations through this repository. The original MIT-licensed OpenStrap project and its protocol research remain credited in [LICENSE](LICENSE) and [NOTICE](NOTICE).
-.\LICENSE:3:Copyright (c) 2026 OpenStrap
+.\DONATE.md:3:Stasis AI is a private fork and does not collect donations through this repository. The original MIT-licensed OpenStrap project and its protocol research remain credited in [Third-Party Notices](THIRD_PARTY_NOTICES.md) and [Notice](NOTICE.md).
+.\THIRD_PARTY_NOTICES.md:10:Copyright (c) 2026 OpenStrap
 .\PRIVACY.md:23:Firebase Analytics, Crashlytics, and Performance collection are disabled at native startup. They remain unavailable unless the developer supplies their own Firebase configuration and the user opts in. The Stasis build template does not configure the original OpenStrap backend, companion service, telemetry, crash, OTA, or health-data endpoints. No health data, telemetry, or crash data is intentionally sent to original infrastructure.
 .\NOTICE.md:10:see [the protocol repo's README](https://github.com/OpenStrap/protocol) for
 .\docs\legal.html:44:    <p>Source: <a href="https://github.com/OpenStrap/edge">github.com/OpenStrap/edge</a></p>
 .\README.md:5:This repository is a branded fork of the MIT-licensed OpenStrap Edge project. Protocol and analytics dependency/package names remain unchanged for compatibility and attribution.
 .\README.md:72:`openstrap_protocol`, `openstrap_analytics`, `openstrap.db`, schema/table/view names, migration identifiers, method-channel names, and native source/type names such as `OpenStrapWidget` remain where changing them could break stored data, protocol behavior, Flutter/native communication, WidgetKit state, or dependency imports. See [migration notes](guides/MIGRATION_FROM_OPENSTRAP.md).
-.\README.md:76:MIT licensed; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Original OpenStrap copyright and protocol/research attribution are preserved.
+.\README.md:76:Stasis-specific original contributions are not released under the MIT License.
 .\tool\gen_star_history.py:30:# OpenStrap/protocol from a job running in OpenStrap/edge returns
 .\tool\gen_star_history.py:34:#   STAR_HISTORY_REPOS="OpenStrap/edge,OpenStrap/protocol" python3 tool/gen_star_history.py
 .\tool\gen_star_history.py:41:         os.environ.get("STAR_HISTORY_REPOS", "OpenStrap/edge").split(",")
-.\docs\notice.html:26:      <a href="https://github.com/OpenStrap/edge/blob/main/LICENSE">LICENSE</a>). It
+.\docs\notice.html:26:      are not released under the MIT License. Portions inherited from OpenStrap Edge
 .\docs\notice.html:34:      <a href="https://github.com/OpenStrap/protocol">protocol package's README</a>
 .\docs\notice.html:39:    <p>Source: <a href="https://github.com/OpenStrap/edge">github.com/OpenStrap/edge</a></p>
 .\lib\app.dart:209:      // in OpenStrapIntents.swift, which writes this route into the App Group
 .\docs\terms.html:36:      <a href="https://github.com/OpenStrap/edge">https://github.com/OpenStrap/edge</a>.</p>
-.\docs\terms.html:99:      <a href="https://github.com/OpenStrap/edge/blob/main/LICENSE">https://github.com/OpenStrap/edge/LICENSE</a>
+.\docs\terms.html:101:      inherited from OpenStrap Edge remain subject to their original MIT terms and
 .\docs\terms.html:119:    <p>Source: <a href="https://github.com/OpenStrap/edge">github.com/OpenStrap/edge</a></p>
 .\docs\style.css:1:/* OpenStrap legal-docs site — minimal, no build step, no framework.
 .\test\absent_not_zero_test.dart:27:    theme: buildOpenStrapTheme(palette),
@@ -351,4 +351,3 @@ lib\state\app_state.dart:238:  // Resolved by CompanionClient as: this override 
 ```text
 lib\ui\profile\about_screen.dart:24:    'https://github.com/OpenStrap/edge/blob/main/NOTICE.md';
 ```
-
