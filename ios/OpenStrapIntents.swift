@@ -1,0 +1,150 @@
+// OpenStrap App Intents — Siri / Shortcuts / Spotlight / Ultra Action Button.
+//
+// Add to the Runner (iOS app) target. These read the phone's App Group snapshot
+// (the same keys WidgetService writes) and answer spoken/dialog queries. Because
+// they're AppShortcuts, they work with zero user setup: "Hey Siri, OpenStrap
+// recovery". The Apple Watch Ultra's Action Button can be bound to any of these
+// via Settings ▸ Action Button ▸ Shortcut.
+
+import AppIntents
+import Foundation
+
+// MARK: - Shared reader
+
+enum OpenStrapShared {
+  static var appGroup: String {
+    Bundle.main.object(forInfoDictionaryKey: "StasisAppGroupIdentifier") as? String
+      ?? "group.com.mycompany.stasisai"
+  }
+
+  static func defaults() -> UserDefaults? { UserDefaults(suiteName: appGroup) }
+
+  static var hasData: Bool { defaults()?.bool(forKey: "has_data") ?? false }
+  static var readiness: Int { defaults()?.object(forKey: "readiness") as? Int ?? -1 }
+  static var strain: Double { defaults()?.object(forKey: "strain") as? Double ?? -1 }
+  static var hrv: Int { defaults()?.object(forKey: "hrv") as? Int ?? -1 }
+  static var rhr: Int { defaults()?.object(forKey: "rhr") as? Int ?? -1 }
+  static var sleepMin: Int { defaults()?.object(forKey: "sleep_min") as? Int ?? -1 }
+
+  static var sleepText: String {
+    guard sleepMin >= 0 else { return "no sleep data yet" }
+    return "\(sleepMin / 60) hours \(sleepMin % 60) minutes"
+  }
+  static var noData: String { "I don't have today's numbers yet. Open Stasis AI and sync your strap." }
+}
+
+// MARK: - Intents
+
+@available(iOS 16.0, *)
+struct RecoveryIntent: AppIntent {
+  static var title: LocalizedStringResource = "Check Recovery"
+  static var description = IntentDescription("Ask Stasis AI for today's recovery.")
+  static var openAppWhenRun = false
+
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard OpenStrapShared.hasData, OpenStrapShared.readiness >= 0 else {
+      return .result(dialog: IntentDialog(stringLiteral: OpenStrapShared.noData))
+    }
+    let r = OpenStrapShared.readiness
+    let tier = r < 34 ? "Take it easy today." : (r < 67 ? "A moderate day looks good." : "You're primed to push.")
+    return .result(dialog: "Your recovery is \(r) percent. \(tier)")
+  }
+}
+
+@available(iOS 16.0, *)
+struct StrainIntent: AppIntent {
+  static var title: LocalizedStringResource = "Check Strain"
+  static var description = IntentDescription("Ask Stasis AI for today's strain.")
+  static var openAppWhenRun = false
+
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard OpenStrapShared.hasData, OpenStrapShared.strain >= 0 else {
+      return .result(dialog: IntentDialog(stringLiteral: OpenStrapShared.noData))
+    }
+    let s = String(format: "%.1f", OpenStrapShared.strain)
+    return .result(dialog: "Today's strain so far is \(s) out of twenty-one.")
+  }
+}
+
+@available(iOS 16.0, *)
+struct SleepIntent: AppIntent {
+  static var title: LocalizedStringResource = "Check Sleep"
+  static var description = IntentDescription("Ask Stasis AI how you slept.")
+  static var openAppWhenRun = false
+
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard OpenStrapShared.hasData, OpenStrapShared.sleepMin >= 0 else {
+      return .result(dialog: IntentDialog(stringLiteral: OpenStrapShared.noData))
+    }
+    return .result(dialog: "You slept \(OpenStrapShared.sleepText) last night.")
+  }
+}
+
+// MARK: - Action intents (these actually DO something, not just answer)
+
+/// "Start breathing" — unlike the query intents above, this needs the live
+/// Flutter engine + BLE stack (a guided session reads live RR from the band),
+/// so it must open the app rather than answer standalone. Writes the target
+/// route into the App Group; the Dart side picks it up via
+/// WidgetService.consumePendingRoute() on launch AND on every foreground
+/// resume (see AppState.checkPendingSiriRoute — openAppWhenRun doesn't
+/// guarantee a fresh launch, it may just foreground an already-running
+/// process, so both call sites matter).
+@available(iOS 16.0, *)
+struct StartBreathingIntent: AppIntent {
+  static var title: LocalizedStringResource = "Start Breathing Session"
+  static var description = IntentDescription(
+    "Start a guided resonance-breathing session in Stasis AI.")
+  static var openAppWhenRun = true
+
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    OpenStrapShared.defaults()?.set("/breathing", forKey: "pending_route")
+    return .result(dialog: "Starting your breathing session.")
+  }
+}
+
+// MARK: - Shortcuts provider (zero-setup Siri phrases)
+
+@available(iOS 16.0, *)
+struct OpenStrapShortcuts: AppShortcutsProvider {
+  static var appShortcuts: [AppShortcut] {
+    AppShortcut(
+      intent: RecoveryIntent(),
+      phrases: [
+        "\(.applicationName) recovery",
+        "What's my recovery in \(.applicationName)",
+        "How recovered am I in \(.applicationName)",
+      ],
+      shortTitle: "Recovery",
+      systemImageName: "bolt.heart")
+
+    AppShortcut(
+      intent: StrainIntent(),
+      phrases: [
+        "\(.applicationName) strain",
+        "What's my strain in \(.applicationName)",
+      ],
+      shortTitle: "Strain",
+      systemImageName: "flame")
+
+    AppShortcut(
+      intent: SleepIntent(),
+      phrases: [
+        "\(.applicationName) sleep",
+        "How did I sleep in \(.applicationName)",
+      ],
+      shortTitle: "Sleep",
+      systemImageName: "moon.zzz")
+
+    AppShortcut(
+      intent: StartBreathingIntent(),
+      phrases: [
+        "Start breathing in \(.applicationName)",
+        "\(.applicationName) breathe",
+        "Start a breathing session in \(.applicationName)",
+        "Breathe with \(.applicationName)",
+      ],
+      shortTitle: "Breathe",
+      systemImageName: "wind")
+  }
+}

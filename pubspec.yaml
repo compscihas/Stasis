@@ -1,0 +1,259 @@
+name: stasis_ai
+description: "Stasis AI: a private, local-first fitness companion for WHOOP 4.0 hardware. Not affiliated with WHOOP, Inc."
+publish_to: 'none'
+# NOTE: bumping this also requires manually bumping MARKETING_VERSION/
+# CURRENT_PROJECT_VERSION for the OpenStrapWidget(Extension) and "OpenStrapWatch
+# Watch App" targets in ios/Runner.xcodeproj/project.pbxproj — they aren't wired
+# to FLUTTER_BUILD_NAME/FLUTTER_BUILD_NUMBER. See guides/IOS_INSTALLATION.md
+# "Version Numbers".
+version: 0.9.21+52
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Local pure-Dart packages — the protocol byte codecs and the metric/analytics
+  # engine. Replace the old cloud backend: decode happens on-device, and the
+  # local re-layer computes metrics here (see lib/data/local_repository.dart +
+  # lib/compute/derivation_engine.dart). The analytics package now points at the
+  # 1 Hz-native family (import via `package:openstrap_analytics/onehz.dart`).
+  # SIBLING PACKAGES ARE PINNED TO COMMIT SHAs, NOT FLOATING `main`/BRANCH REFS.
+  # A floating ref means an upstream commit silently changes the behaviour of an
+  # already-tagged edge release (this bit us: analytics v42 rode `ref: main` into
+  # 0.9.13/0.9.14 with no edge change and shipped the main-thread staging ANRs).
+  # Bump these SHAs deliberately, as part of a reviewed edge change. Local dev
+  # still builds against ../analytics and ../protocol via pubspec_overrides.yaml.
+  # NOTE: this branch is intentionally WHOOP-4-only — protocol stays on `main`,
+  # NOT the gen5/multiband branch.
+  # Both are now MERGE COMMITS ON `main`, not PR-branch heads — the PR-branch
+  # SHAs these briefly pointed at are no longer the canonical location of the
+  # change, and a branch deletion could orphan them.
+  openstrap_protocol:
+    git:
+      url: https://github.com/OpenStrap/protocol.git
+      # Tip of protocol main — OpenStrap/protocol#20 merged: the reassembler now
+      # checks the length-field crc8 before trusting it (a corrupted length byte
+      # used to consume up to 4092 bytes of good stream before this), and
+      # hexToBytes rejects odd-length hex instead of silently flooring it. This
+      # PR sat unpinned for a full day after merging — see fix/issues #22 for
+      # why (edge's own release pipeline shipped the pre-fix decoder).
+      # NOTE: this ref predates protocol fix/issues#21 (realtimeRr RR-bound,
+      # historical-family activity/steps_inc null-vs-0) — repin again once #21
+      # merges to pick those up too.
+      # Verified present: `git show <sha>:lib/src/framing.dart | grep 'crc8(Uint8List'`.
+      ref: 5bb8606964f2d94d9a73dc42c57416cb74282d52
+  openstrap_analytics:
+    git:
+      url: https://github.com/OpenStrap/analytics.git
+      # PR-BRANCH HEAD, not main — OpenStrap/analytics#32 (fix/issue-170-...)
+      # is open, not yet merged. Repin to the merge commit on main once it
+      # lands (same pattern v49 used briefly for protocol/analytics PR heads).
+      # autoDetectWorkouts now bypasses the motion-confirmation gate on a
+      # genuine HR-onset (fast rise vs. immediately-preceding baseline),
+      # fixing low-limb-swing cardio (cycling/rowing) going undetected while
+      # still rejecting slow-drifting elevations (fever/heat/anxiety) that
+      # have no discernible onset.
+      # Verified present at THIS sha: `git show <sha>:lib/src/onehz/workout/auto_detect.dart | grep onsetRiseBpm`.
+      # Moved to the branch's new head (cbbe06a) after CodeRabbit caught a real
+      # off-by-one in the onset window on analytics#32 (earlyMean was 181s vs
+      # preMean's 180s) — fixed there, not worth a separate edge changelog line.
+      ref: cbbe06addec1cb78b4ea2c75f64e8a281ac09294
+
+  # BLE — flutter_blue_plus is the maintained cross-platform GATT client.
+  flutter_blue_plus: ^1.36.8
+
+  # Local raw-first storage.
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+
+  # Background scheduled derivation (the heavy nightly pass: sleep staging +
+  # 24-h spectra). Android: a real OS-scheduled WorkManager job. iOS: see the
+  # honest caveat in lib/compute/background_derivation.dart — app-killed heavy
+  # compute is opportunistic via BGTaskScheduler, never guaranteed.
+  workmanager: ^0.9.0
+
+  # HTTP — retained ONLY for the OTA self-update pointer (see lib/sync/update_service.dart)
+  # and the AI Coach's direct LLM (BYOK) calls. No backend / auth traffic anymore.
+  http: ^1.2.2
+
+  # State + small settings persistence.
+  provider: ^6.1.2
+  shared_preferences: ^2.3.3
+
+  # Charts (for the future server-analytics view).
+  fl_chart: ^0.69.2
+
+  # Interactive maps for GPS workout routes (run/ride/walk). Raster tiles are
+  # fetched on demand from CARTO (basemaps.cartocdn.com) — OSM data, but served
+  # by CARTO rather than tile.openstreetmap.org, whose tile-usage policy does
+  # not permit app traffic. No cloud API keys, no Google/Mapbox. The
+  # "© OpenStreetMap contributors" attribution is rendered on every map.
+  # Recorded GPS points are stored on-device only (workout_route table) and are
+  # never uploaded — but the tile requests do tell CARTO which area is on
+  # screen, which PRIVACY.md states.
+  # flutter_map_tile_caching (offline tile cache) is a documented follow-up — it
+  # pulls heavier native storage deps, so v1 uses live CARTO tiles only.
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
+
+  # Type: Manrope + Barlow Condensed are BUNDLED under assets/fonts/ (declared
+  # in flutter.fonts below), not pulled at runtime — see the note there.
+
+  # Icon packs backing lib/ui/kit/os_icons.dart (see that file's header for the
+  # full per-concept rationale). Mixed deliberately — each pack is used only
+  # for the concepts it's genuinely best at, normalized to one consistent
+  # size/weight by OsAppIcon:
+  #   - phosphor_flutter   — Duotone weight; the primary "hero" biometric/
+  #     domain glyphs (closest replacement for the old illustrations).
+  #   - solar_icons        — Bold weight; literal sport + sleep-stage glyphs.
+  #   - iconsax_flutter    — battery/bluetooth variants + the heartbeat-zigzag
+  #     "activity" glyph (cardio/resting-HR family).
+  #   - fluentui_system_icons — Regular weight; plain monochrome UI chrome
+  #     (arrows, check, settings, calendar…) — reads crisper flat than duotone
+  #     at small utility sizes.
+  #   - hugeicons          — used for exactly the 2 concepts it wins outright
+  #     (a literal ECG waveform + a literal blood-drop); nothing else uses it.
+  hugeicons: ^0.0.11
+  solar_icons: ^0.1.0
+  iconsax_flutter: ^1.0.1
+  fluentui_system_icons: ^1.1.273
+  phosphor_flutter: ^2.1.0
+
+  # Declarative motion language for the design system (entrance stagger, press
+  # pops, count-ups, shimmer) — one consistent vocabulary instead of hand-rolled
+  # AnimationControllers in every component. See lib/ui/design/motion.dart.
+  flutter_animate: ^4.5.2
+
+  # Injectable clock (RouteTracker's stall watchdog) — was a transitive dep via
+  # fake_async/flutter_test; declared directly since lib/ code now imports it.
+  # `clock.now()` instead of raw DateTime.now() lets fakeAsync tests control
+  # time deterministically instead of needing a real multi-second sleep.
+  clock: ^1.1.2
+
+  # Cold-start splash video (assets/splash/splashscreen.mp4) shown while AppState
+  # initializes; dismissed the instant the route gate resolves. See
+  # lib/ui/splash/boot_splash.dart.
+  video_player: ^2.9.2
+
+  # Share recap cards (rendered card → image → share sheet).
+  share_plus: ^10.1.4
+
+  # File picker for data imports (NOOP raw CSV, Edge .db backup, WHOOP export CSV).
+  file_picker: ^8.1.6
+
+  # Apple Health (HealthKit, iOS) + Google Health Connect (Android) — export each
+  # day's derived metrics to the platform health store.
+  health: ^11.1.1
+  # Open the Health Connect app/settings so the user can grant per-app access
+  # manually (the reliable path when its in-app request dialog is locked out).
+  android_intent_plus: ^5.1.0
+
+  # Opt-in, consent-gated companion telemetry + health-data contribution:
+  #   • device_info_plus  — OEM / model / OS for crash-report context
+  #   • battery_plus       — phone battery + charging state (upload gate)
+  #   • connectivity_plus  — Wi-Fi check (only upload the heavy .db on unmetered)
+  #   • uuid               — stable anonymous install id (the device_id anchor)
+  device_info_plus: ^10.1.2   # capped <11 by `health`
+  battery_plus: ^6.1.0
+  connectivity_plus: ^6.1.0
+  uuid: ^4.5.1
+
+  # Home/lock-screen widget bridge (writes a snapshot to the App Group → WidgetKit).
+  home_widget: ^0.6.0
+
+  # OS-level notifications (band battery low / charging, health alerts, recovery,
+  # scheduled reminders). The single display layer; see lib/notify/. Local +
+  # scheduled only (no FCM — the app is cloud-free).
+  flutter_local_notifications: ^18.0.1
+  # zonedSchedule needs an initialized tz database + the device's IANA zone, so
+  # wind-down / weekly-recap nudges fire at the right wall-clock time.
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
+
+  # OTA self-update (Android sideload): read our own version, download + install the
+  # signed APK from the backend's update pointer, with a browser fallback.
+  package_info_plus: ^8.1.0
+  ota_update: ^7.1.0
+  url_launcher: ^6.3.0
+  notification_listener_service: ^1.0.0
+  installed_apps: ^2.1.1
+  flutter_secure_storage: ^10.3.1
+  crypto: ^3.0.6
+  gpt_markdown: ^1.1.7
+  firebase_core: ^4.11.0
+  firebase_crashlytics: ^5.2.4
+  firebase_performance: ^0.11.4+3
+  firebase_analytics: ^12.4.3
+
+# NOTE: to build against the in-tree sibling packages during local development,
+# create a (gitignored) pubspec_overrides.yaml — pub auto-detects it. Keeping the
+# overrides OUT of this file means CI/release resolves the pinned git refs above
+# (the siblings aren't checked out in CI, so a committed path override fails
+# `flutter pub get` with exit 66).
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  test: ^1.25.8
+  # no_runtime_font_fetch_test parses pubspec.yaml to assert every family the
+  # type scale uses is bundled rather than fetched at runtime.
+  yaml: ^3.1.2
+  flutter_launcher_icons: ^0.13.1
+  sqflite_common_ffi: ^2.4.0+3
+  # RouteTracker's stall-watchdog tests drive virtual time (was a transitive
+  # dep via flutter_test; declared directly since test/ now imports it).
+  fake_async: ^1.3.1
+  # day_window_dst_test moves the PROCESS timezone via libc setenv/tzset so the
+  # DST day-length regressions are real on a non-DST host (transitive via
+  # sqflite_common_ffi; declared directly since test/ now imports it).
+  ffi: ^2.1.0
+  # db_p0_fixes_test swaps PathProviderPlatform.instance for a temp-dir fake so
+  # exportDaysDb can run without a platform plugin (transitive via
+  # path_provider; declared directly since test/ now imports it).
+  path_provider_platform_interface: ^2.1.0
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#F4F1EC"
+  adaptive_icon_foreground: "assets/images/icon.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/splash/
+  # Both families are bundled, not fetched. google_fonts resolves a missing
+  # family over HTTP to fonts.gstatic.com on first launch — before the user
+  # has seen the consent screen, and contrary to PRIVACY.md. It also lets the
+  # hero readiness numerals flicker or fall back on a cold offline launch.
+  # SIL Open Font License (OFL.txt alongside the .ttf files, from
+  # https://github.com/google/fonts).
+  fonts:
+    - family: Barlow Condensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed/BarlowCondensed-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/BarlowCondensed/BarlowCondensed-ExtraBold.ttf
+          weight: 800
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope/Manrope-400.ttf
+          weight: 400
+        - asset: assets/fonts/Manrope/Manrope-500.ttf
+          weight: 500
+        - asset: assets/fonts/Manrope/Manrope-600.ttf
+          weight: 600
+        - asset: assets/fonts/Manrope/Manrope-700.ttf
+          weight: 700
+        - asset: assets/fonts/Manrope/Manrope-800.ttf
+          weight: 800

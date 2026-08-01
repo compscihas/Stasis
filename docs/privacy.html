@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Stasis AI Privacy Policy</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="wrap"><header class="site"><a class="brand" href="index.html">Stasis AI</a></header><main>
+<h1>Stasis AI Privacy Policy</h1><p>Effective 1 August 2026.</p>
+<p>Stasis AI stores WHOOP records, derived metrics, profile data, journals, routes, AI history, and settings on the phone. On-device SQLite remains the source of truth and normal app use requires no server.</p>
+<h2>Optional self-hosted services</h2><p>Mirror upload occurs only after a backend and scope are configured, explicit health-data consent is enabled, and synchronization is initiated. Derived scope excludes raw sensor tables and GPS routes. Full-database scope includes sensitive raw health data. Failed uploads stay queued locally and use idempotency keys.</p>
+<p>The AI Coach sends prompts and approved derived results—or a bounded derived JSON context—to the configured LLM. It never exposes an unrestricted database handle, raw sensor tables, or GPS routes. Tool-mode writes require confirmation.</p>
+<h2>Credentials and transport</h2><p>API keys and bearer tokens use the platform Keychain/Keystore. Use authenticated HTTPS in production. Explicit private-network HTTP support is intended for trusted development networks only.</p>
+<h2>Diagnostics</h2><p>Firebase diagnostics are disabled by default and require a developer-owned Firebase project plus user opt-in. The Stasis build does not configure or transmit to original project infrastructure.</p>
+</main></div></body></html>

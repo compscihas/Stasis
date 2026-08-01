@@ -1,0 +1,89 @@
+.fvm
+.fvmrc
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# secrets / build-time env
+.env
+.env.local
+ios/Config/Signing.xcconfig
+
+# stray dumps / archives never belong in assets
+*.gz
+*.sql
+*.dump
+assets/**/*.gz
+
+# android release signing (never commit)
+android/key.properties
+*.jks
+*.keystore
+
+# build outputs / release artifacts
+dist/
+*.apk
+/apk
+
+# Local-only dependency overrides (sibling path linking); never commit.
+pubspec_overrides.yaml
+
+# Firebase configurations
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+firebase.json
+
+# one-off local debug scratch files - had a handful of these lying around
+# untracked for a while (fetch_apps.js, scratch_check_db.py, test_db2.dart,
+# etc), gitignoring the common naming patterns so it doesn't happen again.
+# not trying to catch every possible name, just the obvious ones.
+scratch_*
+**/scratch_test*.dart
+**/*_db2.dart
+/fetch_apps.js
+# Real Firebase credentials stay outside source control. The committed
+# lib/firebase_options.dart is an inert, non-secret placeholder so local and CI
+# builds compile with Firebase disabled; replace it only in release automation.
