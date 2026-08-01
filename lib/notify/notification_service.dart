@@ -1,0 +1,462 @@
+// notification_service.dart — the ONE place OS-level notifications are presented.
+//
+// It is source-agnostic: device alerts (battery/charging), derive-driven insights
+// (illness, recovery), and scheduled nudges (wind-down, weekly recap, move) all
+// flow through here. NotificationCenter decides *whether* to fire; this class is
+// purely the OS presentation + scheduling layer.
+//
+// Design guarantees:
+//   • One channel per category (NotifCategory) so Android users mute each kind
+//     independently. The `health` channel is max-importance (illness alerts).
+//   • Notification ids are partitioned by NotificationEvent.osId; fixed device +
+//     scheduled-reminder ids live in disjoint low bands (< 3000).
+//   • One init, one permission prompt.
+//   • Local + scheduled only — NO FCM/APNs (this app is cloud-free by design).
+//     `kServerIdBase` stays reserved-but-unused for any future push layer.
+//
+// Tap routing: a tapped notification's payload (a deep-link route) is pushed onto
+// [taps]; AppState listens and navigates.
+
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
+
+import 'notification_event.dart';
+import 'notification_ids.dart';
+
+/// The next wall-clock instant at [hour]:[minute] — optionally the next
+/// [weekday] — strictly after [now], in [now]'s own timezone.
+///
+/// CALENDAR arithmetic, never an absolute [Duration]. `d.add(const
+/// Duration(days: 1))` adds exactly 24 hours of ELAPSED time, which is NOT "the
+/// same wall-clock time tomorrow" across a DST transition: a Sunday-18:00
+/// weekly recap computed over a spring-forward landed at 19:00 (and 17:00 over
+/// a fall-back), and the bedtime/hydration dailies drifted the same hour.
+/// Rebuilding the [tz.TZDateTime] from its calendar fields pins the wall-clock
+/// time and lets the tz database resolve whatever offset that day carries.
+@visibleForTesting
+tz.TZDateTime nextInstanceOf(
+  tz.TZDateTime now,
+  int hour,
+  int minute, {
+  int? weekday,
+}) {
+  final loc = now.location;
+  tz.TZDateTime at(int y, int m, int d) =>
+      tz.TZDateTime(loc, y, m, d, hour, minute);
+  var d = at(now.year, now.month, now.day);
+  if (weekday != null) {
+    // Bounded: any weekday is at most 6 calendar days away.
+    for (var i = 0; i < 7 && d.weekday != weekday; i++) {
+      d = at(d.year, d.month, d.day + 1);
+    }
+  }
+  if (!d.isAfter(now)) {
+    d = at(d.year, d.month, d.day + (weekday != null ? 7 : 1));
+  }
+  return d;
+}
+
+/// The same wall-clock time on the following calendar day (DST-safe — see
+/// [nextInstanceOf]).
+@visibleForTesting
+tz.TZDateTime nextCalendarDay(tz.TZDateTime d) =>
+    tz.TZDateTime(d.location, d.year, d.month, d.day + 1, d.hour, d.minute);
+
+class NotificationService {
+  NotificationService._();
+  static final NotificationService instance = NotificationService._();
+
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+  bool _inited = false;
+  bool? _granted;
+
+  /// Deep-link routes from tapped notifications. AppState listens & navigates.
+  final StreamController<String> _taps = StreamController<String>.broadcast();
+  Stream<String> get taps => _taps.stream;
+
+  // ── Channels (one per category — keep them disjoint) ────────────────────────
+  static const AndroidNotificationChannel _deviceChannel =
+      AndroidNotificationChannel(
+    'device_alerts',
+    'Device alerts',
+    description: 'Band battery and charging',
+    importance: Importance.high,
+  );
+  static const AndroidNotificationChannel _healthChannel =
+      AndroidNotificationChannel(
+    'health',
+    'Health alerts',
+    description: 'Illness, unusual physiology and temperature signals',
+    importance: Importance.max,
+  );
+  static const AndroidNotificationChannel _recoveryChannel =
+      AndroidNotificationChannel(
+    'recovery',
+    'Recovery',
+    description: 'Daily recovery readiness from your own data',
+    importance: Importance.defaultImportance,
+  );
+  static const AndroidNotificationChannel _remindersChannel =
+      AndroidNotificationChannel(
+    'reminders',
+    'Reminders',
+    description: 'Wind-down, movement nudges, goals and weekly recaps',
+    importance: Importance.defaultImportance,
+  );
+
+  // ── Fixed ids: device alerts + scheduled reminders (disjoint low band) ───────
+  static const int idLowBattery = 1001;
+  static const int idCharging = 1002;
+  static const int idWindDown = 2002; // scheduled daily ("time to sleep")
+  static const int idWeeklyRecap = 2003; // scheduled weekly
+  static const int idJournalLog = 2004; // scheduled daily ("log your day")
+  static const int idMorningBrief = 2005; // scheduled daily (AI morning briefing)
+  static const int idEveningBrief = 2006; // scheduled daily (AI evening recap)
+  static const int idStillness = 2200; // provisional one-shot ("time to move", issue #123)
+
+  /// Hydration reminders occupy a contiguous slot band [idWaterBase ..
+  /// idWaterBase + maxWaterSlots) — one daily-repeating slot per fire time across
+  /// the waking window. Still inside the disjoint <3000 scheduled-reminder band.
+  static const int idWaterBase = 2100;
+  static const int maxWaterSlots = 24;
+
+  /// Reserved for a future server/push layer (unused — app is cloud-free).
+  static const int kServerIdBase = 2000;
+
+  AndroidNotificationChannel _channelFor(NotifCategory c) => switch (c) {
+        NotifCategory.health => _healthChannel,
+        NotifCategory.recovery => _recoveryChannel,
+        NotifCategory.reminders => _remindersChannel,
+        NotifCategory.device => _deviceChannel,
+      };
+
+  Importance _importanceFor(NotifCategory c) =>
+      c == NotifCategory.health ? Importance.max : Importance.defaultImportance;
+  Priority _priorityFor(NotifCategory c) =>
+      c == NotifCategory.health ? Priority.max : Priority.defaultPriority;
+
+  /// Set up the plugin, channels, timezone db and the tap handler. Idempotent.
+  /// Does NOT prompt for permission.
+  Future<void> init() async {
+    if (_inited) return;
+    try {
+      tzdata.initializeTimeZones();
+      final name = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(name));
+    } catch (_) {/* tz stays UTC; scheduling still works, just in UTC wall-clock */}
+
+    const AndroidInitializationSettings android =
+        AndroidInitializationSettings('@mipmap/launcher_icon');
+    const DarwinInitializationSettings darwin = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    await _plugin.initialize(
+      const InitializationSettings(android: android, iOS: darwin),
+      onDidReceiveNotificationResponse: _onTap,
+    );
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await androidImpl?.createNotificationChannel(_deviceChannel);
+    await androidImpl?.createNotificationChannel(_healthChannel);
+    await androidImpl?.createNotificationChannel(_recoveryChannel);
+    await androidImpl?.createNotificationChannel(_remindersChannel);
+    _inited = true;
+  }
+
+  void _onTap(NotificationResponse r) {
+    final route = r.payload;
+    if (route != null && route.isNotEmpty) _taps.add(route);
+  }
+
+  /// If the app was launched by tapping a notification, replay its route once.
+  Future<void> consumeLaunchRoute() async {
+    try {
+      final d = await _plugin.getNotificationAppLaunchDetails();
+      if (d?.didNotificationLaunchApp ?? false) {
+        final route = d?.notificationResponse?.payload;
+        if (route != null && route.isNotEmpty) _taps.add(route);
+      }
+    } catch (_) {}
+  }
+
+  /// Request notification permission once (iOS always; Android 13+). Cached.
+  ///
+  /// [allowPrompt] gates whether this may show the OS's interactive
+  /// authorization dialog. Apple's notification docs ("Asking permission to
+  /// use notifications") document that authorization should be requested in
+  /// CONTEXT — the interactive prompt assumes an active foreground scene to
+  /// present from — never automatically, and never from a background
+  /// execution context (a headless BGTaskScheduler/BGAppRefreshTask run or a
+  /// Dart background isolate has no such scene). Callers that know they're
+  /// running headless (see background_sync.dart's checkSyncStaleness) must
+  /// pass `allowPrompt: false`; every foreground/contextual caller keeps the
+  /// default `true`. With `false` and no prior decision cached, this checks
+  /// (never requests) via `checkPermissions()` and fails closed to `false`
+  /// rather than attempting to prompt — matching the "in-app feed is ALWAYS
+  /// written, OS presentation is best-effort" contract in NotificationCenter.
+  ///
+  /// A cached DENIAL is never final. `_granted` used to latch false for the
+  /// whole process with nothing to reset it, so a user who denied the prompt
+  /// (fired at pairing time), went to OS Settings, enabled notifications and
+  /// came back got ZERO notifications and ZERO scheduled reminders until a full
+  /// app restart — every presentEvent/scheduleDaily/scheduleWeekly/scheduleOnce
+  /// early-returned on the stale `false`. Only a GRANT is cached now; a denial
+  /// is re-read from the live OS state (non-prompting, cheap) on the next call.
+  /// [invalidatePermissionCache] additionally drops a cached grant so a
+  /// REVOCATION is noticed too — app.dart calls it on every foreground resume.
+  Future<bool> ensurePermission({bool allowPrompt = true}) async {
+    if (_granted == true) return true;
+    final request = debugRequestPermission;
+    if (request == null) await init();
+
+    if (_granted == false) {
+      // Denied earlier in this process — re-read the OS rather than trusting a
+      // stale no. Never re-prompts: once denied, both platforms no-op the
+      // request anyway, and Settings is the only real path back.
+      final live = await hasPermission();
+      if (live) _granted = true;
+      return live;
+    }
+
+    if (!allowPrompt) return hasPermission();
+
+    bool granted;
+    if (request != null) {
+      granted = await request();
+    } else {
+      granted = true;
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        granted = await ios.requestPermissions(
+                alert: true, badge: true, sound: true) ??
+            false;
+      }
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        granted = await android.requestNotificationsPermission() ?? false;
+      }
+    }
+    _granted = granted;
+    return granted;
+  }
+
+  /// Drop the cached authorization decision so the next [ensurePermission] /
+  /// [hasPermission] re-reads the live OS state. Called on every foreground
+  /// resume (app.dart): the user may have flipped our notification switch
+  /// either way in Settings while we were backgrounded.
+  void invalidatePermissionCache() => _granted = null;
+
+  /// Test seams for the platform permission plumbing (there is no plugin to
+  /// talk to in a unit test). [debugRequestPermission] stands in for the
+  /// interactive request, [debugProbePermission] for the non-prompting check.
+  @visibleForTesting
+  Future<bool> Function()? debugRequestPermission;
+  @visibleForTesting
+  Future<bool> Function()? debugProbePermission;
+
+  /// Non-mutating: whether notifications are currently enabled, WITHOUT ever
+  /// showing the OS authorization prompt. Safe to call from any context,
+  /// including headless/background. Does not populate [_granted] — a
+  /// not-yet-decided status here shouldn't get permanently cached as
+  /// "denied" just because a background check happened to run first.
+  Future<bool> hasPermission() async {
+    try {
+      final probe = debugProbePermission;
+      if (probe != null) return await probe();
+      await init();
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) return (await ios.checkPermissions())?.isEnabled ?? false;
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      return true; // other platforms (macOS/Linux) — no gating here
+    } catch (_) {
+      return false;
+    }
+  }
+
+  NotificationDetails _details(NotifCategory c) {
+    final ch = _channelFor(c);
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        ch.id,
+        ch.name,
+        channelDescription: ch.description,
+        importance: _importanceFor(c),
+        priority: _priorityFor(c),
+        icon: '@mipmap/launcher_icon',
+      ),
+      iOS: const DarwinNotificationDetails(),
+    );
+  }
+
+  /// Present a NotificationEvent on its category channel. Same osId replaces, so
+  /// re-firing the same logical event never stacks duplicates. Never throws.
+  ///
+  /// Returns true when the event was actually shown (permission granted, no
+  /// error), false otherwise — [NotificationCenter.emit] uses this to record a
+  /// key as fired only on a real present, so a permission-denied no-op doesn't
+  /// permanently consume the dedupeKey.
+  ///
+  /// [allowPermissionPrompt] — see [ensurePermission]'s doc. Pass `false` from
+  /// any caller that knows it's running headless/in the background.
+  Future<bool> presentEvent(
+    NotificationEvent e, {
+    bool allowPermissionPrompt = true,
+  }) async {
+    try {
+      if (!await ensurePermission(allowPrompt: allowPermissionPrompt)) {
+        return false;
+      }
+      // Collision-free allocated id (NOT the old hashCode-modulo) — see
+      // notification_ids.dart. Two same-category events used to be able to
+      // share an id, and `show` REPLACES: one of them vanished silently.
+      await _plugin.show(
+        await NotificationIds.instance.idFor(e),
+        e.title,
+        e.body,
+        _details(e.category),
+        payload: e.route,
+      );
+      return true;
+    } catch (_) {
+      return false; /* best-effort */
+    }
+  }
+
+  /// Legacy device-alert entry (battery/charging). Kept for device_alerts.dart.
+  Future<void> showDevice({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      if (!await ensurePermission()) return;
+      await _plugin.show(id, title, body, _details(NotifCategory.device));
+    } catch (_) {}
+  }
+
+  // ── Scheduling (wall-clock recurring nudges) ────────────────────────────────
+
+  tz.TZDateTime _nextInstanceOf(int hour, int minute, {int? weekday}) =>
+      nextInstanceOf(tz.TZDateTime.now(tz.local), hour, minute,
+          weekday: weekday);
+
+  Future<void> scheduleDaily({
+    required int id,
+    required NotifCategory category,
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    String? route,
+    bool skipToday = false,
+  }) async {
+    try {
+      if (!await ensurePermission()) return;
+      var when = _nextInstanceOf(hour, minute);
+      // skipToday: tonight's instance is already handled (e.g. the journal was
+      // logged before the prompt time) — start the daily repeat tomorrow.
+      if (skipToday) {
+        final now = tz.TZDateTime.now(tz.local);
+        if (when.year == now.year &&
+            when.month == now.month &&
+            when.day == now.day) {
+          // Calendar day, not +24h — see nextInstanceOf's DST note.
+          when = nextCalendarDay(when);
+        }
+      }
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        when,
+        _details(category),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: route,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> scheduleWeekly({
+    required int id,
+    required NotifCategory category,
+    required String title,
+    required String body,
+    required int weekday, // DateTime.monday..sunday
+    required int hour,
+    required int minute,
+    String? route,
+  }) async {
+    try {
+      if (!await ensurePermission()) return;
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        _nextInstanceOf(hour, minute, weekday: weekday),
+        _details(category),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: route,
+      );
+    } catch (_) {}
+  }
+
+  /// One-shot absolute-time schedule (unlike [scheduleDaily]/[scheduleWeekly],
+  /// no `matchDateTimeComponents` — this fires exactly once at [at] and is not
+  /// re-armed by the plugin). Calling again with the same [id] before it fires
+  /// replaces the pending instance (same "cancel, then reschedule" convention
+  /// [scheduleStandingReminders] already uses for the recurring reminders).
+  /// Used for the provisional "time to move" nudge (issue #123): scheduled
+  /// `lastMovement + 2h` so it fires from the OS wall-clock even while the app
+  /// is closed, instead of only being evaluated on next foreground open.
+  Future<void> scheduleOnce({
+    required int id,
+    required NotifCategory category,
+    required String title,
+    required String body,
+    required DateTime at,
+    String? route,
+  }) async {
+    try {
+      if (!await ensurePermission()) return;
+      final when = tz.TZDateTime.from(at, tz.local);
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        when,
+        _details(category),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: route,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> cancel(int id) async {
+    try {
+      await _plugin.cancel(id);
+    } catch (_) {}
+  }
+}

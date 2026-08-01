@@ -1,0 +1,9 @@
+// Public defaults. Keep personal Apple signing values in Signing.xcconfig.
+APP_BUNDLE_IDENTIFIER = com.mycompany.stasisai
+APP_WIDGET_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).widget
+APP_WATCH_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).watchkitapp
+APP_GROUP_IDENTIFIER = group.com.mycompany.stasisai
+APP_URL_SCHEME = stasisai
+APPLE_DEVELOPMENT_TEAM =
+
+#include? "Signing.xcconfig"

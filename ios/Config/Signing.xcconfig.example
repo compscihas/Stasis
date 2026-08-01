@@ -1,0 +1,11 @@
+// Copy to Signing.xcconfig and replace with identifiers from your Apple account.
+// Signing.xcconfig is gitignored and should not be committed. Automatic signing
+// is used; never commit provisioning profiles or certificates.
+// REQUIRED: replace mycompany with a reverse-DNS identifier you own.
+APP_BUNDLE_IDENTIFIER = com.mycompany.stasisai
+APP_WIDGET_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).widget
+APP_WATCH_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).watchkitapp
+APP_GROUP_IDENTIFIER = group.com.mycompany.stasisai
+APP_URL_SCHEME = stasisai
+// REQUIRED: the 10-character Team ID shown in Apple Developer Membership.
+APPLE_DEVELOPMENT_TEAM = YOURTEAMID

@@ -1,0 +1,156 @@
+// SEAM: cloud removed. Implement against openstrap_analytics + db.dart in the local re-layer. See HANDOFF.
+//
+// LocalRepository is the contract every UI screen consumes. It MIRRORS the old
+// ApiClient surface 1:1 (same method names, args, and return shapes — Map / List
+// of metric fields) so the screens, the ScreenLoaderMixin, and the AI Coach did
+// not have to change their call sites when the cloud transport was excised.
+//
+// Today every method throws UnimplementedError('re-layer: <method>'). The future
+// local re-layer will implement this interface by computing the same payloads from
+// `lib/data/db.dart` (the local raw SQLite store) through the pure-Dart
+// `openstrap_analytics` package — the exact metric functions the backend used to
+// run server-side. The screen DATA layer is therefore a clean, localized seam:
+// nothing above this file references HTTP, JWT, or a backend URL anymore.
+
+import '../gps/route_models.dart';
+
+/// The single source of truth for "no step goal configured yet" (8k/day is
+/// the commonly-cited optimal benefit/cost ratio for step count). Both the
+/// data layer (local_repository_impl.dart's `getProfile()`/`_stepGoal()`,
+/// which is where `TodayData.stepGoal` actually gets its default BEFORE any
+/// UI-level fallback ever sees a null) and the UI (`StepGoalScreen.defaultGoal`,
+/// the preset picker's own default) must agree — they used to independently
+/// default to two different values (10000 here vs. 8000 in the UI), so the UI
+/// fallback never actually triggered for real profile data.
+const int kDefaultStepGoal = 8000;
+
+/// Replaces the old ApiClient `ApiException`. Screens catch this to show an
+/// offline / error state. The re-layer can subclass or throw it directly.
+class RepositoryException implements Exception {
+  final int status;
+  final String body;
+  RepositoryException(this.status, this.body);
+  @override
+  String toString() => 'Repository error $status: $body';
+}
+
+/// The local data contract for every insights screen + the AI Coach.
+/// Return types mirror the cloud ApiClient exactly (defensive Map/List blobs).
+abstract class LocalRepository {
+  // ── profile ────────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getProfile() =>
+      throw UnimplementedError('re-layer: getProfile');
+  Future<Map<String, dynamic>> patchProfile(Map<String, dynamic> fields) =>
+      throw UnimplementedError('re-layer: patchProfile');
+  Future<Map<String, dynamic>> setStepGoal(int goal) =>
+      throw UnimplementedError('re-layer: setStepGoal');
+
+  // ── today / summaries ────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getToday() =>
+      throw UnimplementedError('re-layer: getToday');
+  Future<List<Map<String, dynamic>>> getSleep({int? from, int? to}) =>
+      throw UnimplementedError('re-layer: getSleep');
+  Future<List<Map<String, dynamic>>> getStrain({int? from, int? to}) =>
+      throw UnimplementedError('re-layer: getStrain');
+  Future<List<Map<String, dynamic>>> getSessions({int? from, int? to}) =>
+      throw UnimplementedError('re-layer: getSessions');
+  Future<Map<String, dynamic>> getHistory({String range = '30d'}) =>
+      throw UnimplementedError('re-layer: getHistory');
+
+  /// Cross-day analytics rollup (illness/anomaly/load/SRI/jetlag/chronotype/
+  /// sleep-debt/percentile/glass-box/BRV) — the seam the cross-day screens and
+  /// notifications read. Empty map when no rollup has been computed yet.
+  Future<Map<String, dynamic>> getInsights() =>
+      throw UnimplementedError('re-layer: getInsights');
+
+  // ── day drill-down detail ────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getDaySleepV2(String date) =>
+      throw UnimplementedError('re-layer: getDaySleepV2');
+  Future<Map<String, dynamic>> getDayStrain(String date) =>
+      throw UnimplementedError('re-layer: getDayStrain');
+  Future<Map<String, dynamic>> getDaySleep(String date) =>
+      throw UnimplementedError('re-layer: getDaySleep');
+  Future<Map<String, dynamic>> getDayTimeline(String date) =>
+      throw UnimplementedError('re-layer: getDayTimeline');
+  Future<Map<String, dynamic>> getDayStress(String date) =>
+      throw UnimplementedError('re-layer: getDayStress');
+  Future<Map<String, dynamic>> getDayHeart(String date) =>
+      throw UnimplementedError('re-layer: getDayHeart');
+  Future<Map<String, dynamic>> getDayLungs(String date) =>
+      throw UnimplementedError('re-layer: getDayLungs');
+  Future<Map<String, dynamic>> getDayWear(String date) =>
+      throw UnimplementedError('re-layer: getDayWear');
+  Future<Map<String, dynamic>> getDayHrv(String date) =>
+      throw UnimplementedError('re-layer: getDayHrv');
+
+  /// Every day ('YYYY-MM-DD') the lookback screen can actually RENDER — the days
+  /// with a genuine derived bundle (`getDayTimeline` returns real data for), not
+  /// raw-only or skip-marker days that would render empty — newest first. Bounds
+  /// the lookback screen's day navigation (the reachable prev/next days + the
+  /// date-picker's selectable days). Empty when nothing has been derived yet.
+  Future<List<String>> availableDays() =>
+      throw UnimplementedError('re-layer: availableDays');
+
+  // ── trends + records + charts ────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getTrend(String metric,
+          {String scale = 'week', String? anchor}) =>
+      throw UnimplementedError('re-layer: getTrend');
+  Future<Map<String, dynamic>> getRecords() =>
+      throw UnimplementedError('re-layer: getRecords');
+  Future<Map<String, dynamic>> getChart(String metric, {int? from, int? to}) =>
+      throw UnimplementedError('re-layer: getChart');
+
+  // ── workouts (manual / live / auto) ──────────────────────────────────────────
+  Future<Map<String, dynamic>> getWorkouts({String range = 'month'}) =>
+      throw UnimplementedError('re-layer: getWorkouts');
+  Future<Map<String, dynamic>> getWorkout(String id) =>
+      throw UnimplementedError('re-layer: getWorkout');
+  Future<void> deleteWorkout(String id) =>
+      throw UnimplementedError('re-layer: deleteWorkout');
+  Future<Map<String, dynamic>> startWorkout(String type, {String? title}) =>
+      throw UnimplementedError('re-layer: startWorkout');
+  Future<Map<String, dynamic>> endWorkout(String workoutId) =>
+      throw UnimplementedError('re-layer: endWorkout');
+  Future<Map<String, dynamic>> setWorkoutType(String id, String type) =>
+      throw UnimplementedError('re-layer: setWorkoutType');
+  // GPS route for a run/ride/walk (on-device only). Null when none recorded.
+  Future<WorkoutRoute?> getWorkoutRoute(String id) =>
+      throw UnimplementedError('re-layer: getWorkoutRoute');
+
+  // ── journal + correlation engine ──────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getJournal({String range = '30d'}) =>
+      throw UnimplementedError('re-layer: getJournal');
+  Future<void> postJournal(String date, List<String> tags, String note) =>
+      throw UnimplementedError('re-layer: postJournal');
+  Future<Map<String, dynamic>> getJournalInsights({String range = '90d'}) =>
+      throw UnimplementedError('re-layer: getJournalInsights');
+
+  // ── menstrual cycle ────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getCycle() =>
+      throw UnimplementedError('re-layer: getCycle');
+  Future<void> postCycleLog(String date, {String kind = 'start', String? note}) =>
+      throw UnimplementedError('re-layer: postCycleLog');
+  Future<void> deleteCycleLog(String date) =>
+      throw UnimplementedError('re-layer: deleteCycleLog');
+  Future<void> postCycleSymptoms(String date, List<String> symptoms,
+          {String? note}) =>
+      throw UnimplementedError('re-layer: postCycleSymptoms');
+  Future<Map<String, List<String>>> getCycleSymptoms() =>
+      throw UnimplementedError('re-layer: getCycleSymptoms');
+
+  // ── live HRV spot-check ───────────────────────────────────────────────────────
+  /// Was POST /spotcheck (decode collected live RR frames → HRV). The re-layer
+  /// computes this on-device via openstrap_protocol.realtimeRr + openstrap_analytics.
+  Future<Map<String, dynamic>> spotCheck(List<String> records) =>
+      throw UnimplementedError('re-layer: spotCheck');
+
+  // ── guided-breathing cardiac coherence ────────────────────────────────────────
+  /// Decode live RR frames collected during a guided-breathing session and
+  /// compute McCraty & Zayas 2014 cardiac coherence on-device. [pacedHz] is
+  /// the guided pacing frequency (e.g. 5.5 breaths/min == 0.0917 Hz).
+  Future<Map<String, dynamic>> breathingCoherence(
+    List<String> records, {
+    double? pacedHz,
+  }) =>
+      throw UnimplementedError('re-layer: breathingCoherence');
+}
