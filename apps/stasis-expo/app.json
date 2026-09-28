@@ -1,0 +1,90 @@
+{
+  "expo": {
+    "name": "Stasis AI",
+    "slug": "stasis-ai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "stasisai",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F2F2F7",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.hasanyousuf.stasis",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Stasis connects to your wearable to sync health and fitness data.",
+        "NSHealthShareUsageDescription": "Stasis can read health data you explicitly choose to connect.",
+        "NSHealthUpdateUsageDescription": "Stasis can save workouts and derived metrics when you enable Health access.",
+        "UIBackgroundModes": [
+          "bluetooth-central",
+          "processing",
+          "fetch"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F2F2F7",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "package": "com.hasanyousuf.stasis",
+      "permissions": [
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "POST_NOTIFICATIONS",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F2F2F7",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76,
+          "dark": {
+            "backgroundColor": "#05080F",
+            "image": "./assets/images/splash-icon.png"
+          }
+        }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-background-task",
+      "expo-notifications",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Stasis uses Bluetooth to sync data from your wearable."
+        }
+      ],
+      "expo-image"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1546acad-80dd-4c19-9b17-7bb0fba70374"
+      }
+    },
+    "owner": "hasanyousuf"
+  }
+}
