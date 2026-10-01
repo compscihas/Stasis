@@ -1,0 +1,4 @@
+[submodule "stasis-downloads"]
+	path = stasis-downloads
+	url = https://github.com/compscihas/Stasis-Downloads.git
+	branch = main
