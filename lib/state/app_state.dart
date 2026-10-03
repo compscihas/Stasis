@@ -546,11 +546,10 @@ class AppState extends ChangeNotifier {
   /// and starve the background BLE connection.
   AppRoute get route {
     if (!initialized) return AppRoute.loading;
-    // First run, fresh install: offer "existing v2 user vs new user" before we
-    // ask anyone to pair. A returning (already-paired) user skips it even if the
-    // choice flag predates this build.
-    if (_onboardChoice == null && !isPaired) return AppRoute.welcome;
-    if (!isPaired) return AppRoute.pairing;
+    // Temporary prototype launch: start on Today while account login is not
+    // part of the product yet. Pairing/onboarding can be put back behind the
+    // future sign-in flow when that screen is added.
+    if (!isPaired) return AppRoute.shell;
     if (!profileComplete) return AppRoute.profile;
     return AppRoute.shell;
   }
@@ -639,8 +638,32 @@ class AppState extends ChangeNotifier {
   /// full ChangeNotifier repaint.
   final ValueNotifier<int> insightsRevision = ValueNotifier<int>(0);
   StreamSubscription<String>? _tapSub;
+  Future<void>? initialNotificationRouting;
+  String? _morningCheckinHandledDay;
+
+  bool get morningCheckinHandledToday =>
+      _morningCheckinHandledDay == _localDayKey(DateTime.now());
+
+  void markMorningCheckinHandled() {
+    _morningCheckinHandledDay = _localDayKey(DateTime.now());
+  }
+
+  String _localDayKey(DateTime date) =>
+      '${date.year}-${date.month}-${date.day}';
 
   void _handleTapRoute(String route) {
+    // A morning check-in is a once-per-day prompt. Keep this guard in memory so
+    // duplicate launch/callback delivery cannot push it a second time.
+    const checkinRoutes = {
+      kRouteMorningCheckin,
+      kRouteMorningCheckinGood,
+      kRouteMorningCheckinOkay,
+      kRouteMorningCheckinLow,
+    };
+    if (checkinRoutes.contains(route)) {
+      if (morningCheckinHandledToday) return;
+      markMorningCheckinHandled();
+    }
     final t = resolveTapRoute(route); // pure — lib/notify/tap_router.dart
     if (t.screen != null) screenRequest.value = t.screen;
     navRequest.value = t.tab;
@@ -649,11 +672,12 @@ class AppState extends ChangeNotifier {
   AppState() {
     final views = WidgetsBinding.instance.platformDispatcher.views;
     final lifecycle = WidgetsBinding.instance.lifecycleState;
-    final isHeadless = views.isEmpty || 
-                       lifecycle == AppLifecycleState.detached || 
-                       lifecycle == null || 
-                       lifecycle == AppLifecycleState.paused || 
-                       lifecycle == AppLifecycleState.hidden;
+    final isHeadless =
+        views.isEmpty ||
+        lifecycle == AppLifecycleState.detached ||
+        lifecycle == null ||
+        lifecycle == AppLifecycleState.paused ||
+        lifecycle == AppLifecycleState.hidden;
     _background = isHeadless;
 
     _gestureDispatcher = GestureDispatcher(
@@ -672,10 +696,13 @@ class AppState extends ChangeNotifier {
       // before the HISTORY_END ACK, and a reader to seed the offload frontier
       // from the durable high-water on (re)connect.
       onCommitBatch: (raws, samples, trimTokenHex, {archives}) =>
-          LocalDb.commitSyncBatch(raws, samples,
-              trimToken: trimTokenHex,
-              archives: archives,
-              onCheckpoint: (msg) => _log('[COMMIT] $msg')),
+          LocalDb.commitSyncBatch(
+            raws,
+            samples,
+            trimToken: trimTokenHex,
+            archives: archives,
+            onCheckpoint: (msg) => _log('[COMMIT] $msg'),
+          ),
       // Pre-setup fallback only: the drain path archives inside commitSyncBatch.
       onArchiveRecord: LocalDb.archiveRawRecord,
       cursorReader: LocalDb.getCursorInt,
@@ -714,8 +741,13 @@ class AppState extends ChangeNotifier {
     _init();
     // Notification taps → request a tab switch (the shell listens to navRequest).
     _tapSub = NotificationService.instance.taps.listen(_handleTapRoute);
-    unawaited(NotificationService.instance.consumeLaunchRoute());
+    initialNotificationRouting = _routeInitialNotificationLaunch();
     unawaited(checkPendingSiriRoute());
+  }
+
+  Future<void> _routeInitialNotificationLaunch() async {
+    final route = await NotificationService.instance.consumeLaunchRoute();
+    if (route != null) _handleTapRoute(route);
   }
 
   /// Build the object graph WITHOUT running [_init] and without touching a
@@ -735,7 +767,8 @@ class AppState extends ChangeNotifier {
       onMarkMoment: _markMomentFromGesture,
       onWorkoutToggle: _toggleWorkoutFromGesture,
     );
-    this.engine = engine ??
+    this.engine =
+        engine ??
         BleEngine(
           onRecord: _onRecord,
           onState: _onEngineState,
@@ -811,8 +844,10 @@ class AppState extends ChangeNotifier {
     _backfillTimer ??= Timer.periodic(_backfillInterval, (_) {});
     _alarmGraceTimer ??= Timer(const Duration(minutes: 5), () {});
     _spotTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {});
-    _breathingRecomputeTimer ??=
-        Timer.periodic(_breathingRecomputeInterval, (_) {});
+    _breathingRecomputeTimer ??= Timer.periodic(
+      _breathingRecomputeInterval,
+      (_) {},
+    );
     _workoutTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {});
   }
 
@@ -831,11 +866,7 @@ class AppState extends ChangeNotifier {
   /// [_onLiveFrame] does, with the ingest wall-clock supplied by the caller.
   /// Tests only — lets a test replay a session's frames deterministically.
   @visibleForTesting
-  void debugFeedLiveAccel(
-    List<double> mags, {
-    int? recTs,
-    required int atMs,
-  }) {
+  void debugFeedLiveAccel(List<double> mags, {int? recTs, required int atMs}) {
     _ingestLiveMagsAt(proto.ImuFrame(recTs ?? 0, 0, mags), atMs);
     _trackCoverage(recTs);
   }
@@ -880,16 +911,19 @@ class AppState extends ChangeNotifier {
       TelemetryService.instance.breadcrumb('derive: $mode start');
       // Refresh the UI after EACH day so Today/trends fill in as the sweep runs,
       // not only at the end (a multi-day backfill can be many days of work).
-      await TelemetryService.instance.traced('derive_$mode', () => _derive.run(
-        _profile,
-        heavy: heavy,
-        onDayDone: (day, index, total) async {
-          if (index == total || index == 1 || index % 3 == 0) {
-            dbCounts = await LocalDb.counts();
-            notifyListeners();
-          }
-        },
-      ));
+      await TelemetryService.instance.traced(
+        'derive_$mode',
+        () => _derive.run(
+          _profile,
+          heavy: heavy,
+          onDayDone: (day, index, total) async {
+            if (index == total || index == 1 || index % 3 == 0) {
+              dbCounts = await LocalDb.counts();
+              notifyListeners();
+            }
+          },
+        ),
+      );
       TelemetryService.instance.breadcrumb('derive: $mode done');
       await LocalDb.refreshComputeFreshness();
       _bumpInsightsRevision();
@@ -939,7 +973,11 @@ class AppState extends ChangeNotifier {
       // Was silently swallowed before — this is a real pipeline failure
       // (derive/health-export/etc.) that Firebase never saw. Non-fatal, not
       // fatal: the app keeps running, but this is worth knowing about.
-      TelemetryService.instance.recordNonFatal(e, st, reason: 'post_drain_failed');
+      TelemetryService.instance.recordNonFatal(
+        e,
+        st,
+        reason: 'post_drain_failed',
+      );
     } finally {
       TelemetryService.instance.setContext('derive_active', false);
     }
@@ -1195,9 +1233,12 @@ class AppState extends ChangeNotifier {
     if (nowMs - _lastStillnessScheduleMs < 10 * 60 * 1000) return;
     _lastStillnessScheduleMs = nowMs;
     try {
-      await NotificationService.instance.cancel(NotificationService.idStillness);
-      final at =
-          DateTime.fromMillisecondsSinceEpoch(nowMs).add(const Duration(hours: 2));
+      await NotificationService.instance.cancel(
+        NotificationService.idStillness,
+      );
+      final at = DateTime.fromMillisecondsSinceEpoch(
+        nowMs,
+      ).add(const Duration(hours: 2));
       if (at.hour < 9 || at.hour >= 21) return; // would land outside daytime
       await NotificationService.instance.scheduleOnce(
         id: NotificationService.idStillness,
@@ -1422,8 +1463,7 @@ class AppState extends ChangeNotifier {
     // every record commitSyncBatch durably persists, decoded_onehz-eligible
     // or not, so it's the honest frontier (same one RecordGate/backfill
     // policies already trust).
-    _lastRecTs =
-        await LocalDb.getCursorInt('rec_ts_hw') ?? lastSynced?.tsEpoch;
+    _lastRecTs = await LocalDb.getCursorInt('rec_ts_hw') ?? lastSynced?.tsEpoch;
     dbCounts = await LocalDb.counts();
     await LocalDb.refreshComputeFreshness();
     _savedAlarm = (await SharedPreferences.getInstance()).getInt('alarm_epoch');
@@ -1517,11 +1557,15 @@ class AppState extends ChangeNotifier {
         const Duration(seconds: 20),
       );
       if (!connected) {
-        _log('[tasker] pending buzz (pattern=$pattern) still queued — '
-            'no connection within 20s, will retry on the next reconnect');
+        _log(
+          '[tasker] pending buzz (pattern=$pattern) still queued — '
+          'no connection within 20s, will retry on the next reconnect',
+        );
         return;
       }
-      _log('[tasker] consuming pending buzz (pattern=$pattern) from headless intent');
+      _log(
+        '[tasker] consuming pending buzz (pattern=$pattern) from headless intent',
+      );
       await engine.buzzPattern(pattern);
       await TaskerBridge.clearPendingBuzz();
     } finally {
@@ -1792,7 +1836,8 @@ class AppState extends ChangeNotifier {
   /// The window this session covered, or null when there is nothing defensible
   /// to record. Pure decision lives in [deriveLiveCoverageWindow]; this only
   /// feeds it the observations.
-  LiveCoverageWindow? _liveCoverageWindow(int steps) => deriveLiveCoverageWindow(
+  LiveCoverageWindow? _liveCoverageWindow(int steps) =>
+      deriveLiveCoverageWindow(
         steps: steps,
         samples100Hz: _liveSamples,
         bandStartTs: _liveCoverStartTs,
@@ -2068,7 +2113,10 @@ class AppState extends ChangeNotifier {
       // Live stream ended → fold this bout into the personal cadence calibration
       // (best-effort; only credible walking updates it) and reset the counter.
       unawaited(_finalizeLivePedometer());
-      if (_keepAlive && isPaired && !_reconnecting && !device.autoReconnectPaused) {
+      if (_keepAlive &&
+          isPaired &&
+          !_reconnecting &&
+          !device.autoReconnectPaused) {
         _log('Connection dropped — reconnecting…');
         _stopBackfillTimer();
         if (_background) {
@@ -2118,7 +2166,9 @@ class AppState extends ChangeNotifier {
     if (!_keepAlive || paired == null || busy || _reconnecting) return;
     if (!engine.isConnected) return;
     if (_syncBurst != null) {
-      _log('Periodic history refresh skipped — a sync burst is already running.');
+      _log(
+        'Periodic history refresh skipped — a sync burst is already running.',
+      );
       return;
     }
     try {
@@ -2396,12 +2446,9 @@ class AppState extends ChangeNotifier {
     // Nudge the UI once the grace window elapses so an unconfirmed alarm flips to
     // its soft warning even if no event ever arrives.
     _alarmGraceTimer?.cancel();
-    _alarmGraceTimer = Timer(
-      Duration(milliseconds: _alarm.graceMs + 250),
-      () {
-        if (!_alarm.confirmed) notifyListeners();
-      },
-    );
+    _alarmGraceTimer = Timer(Duration(milliseconds: _alarm.graceMs + 250), () {
+      if (!_alarm.confirmed) notifyListeners();
+    });
     notifyListeners();
   }
 
@@ -2505,15 +2552,17 @@ class AppState extends ChangeNotifier {
 
   Future<void> _notifyAlarmFired() async {
     try {
-      await NotificationCenter.instance.emit(NotificationEvent(
-        dedupeKey: 'alarm_fired:${_alarm.firedAt ?? 0}',
-        category: NotifCategory.reminders,
-        priority: NotifPriority.critical,
-        title: 'Alarm',
-        body: 'Your strap alarm just fired.',
-        date: todayLabel(),
-        route: '/today',
-      ));
+      await NotificationCenter.instance.emit(
+        NotificationEvent(
+          dedupeKey: 'alarm_fired:${_alarm.firedAt ?? 0}',
+          category: NotifCategory.reminders,
+          priority: NotifPriority.critical,
+          title: 'Alarm',
+          body: 'Your strap alarm just fired.',
+          date: todayLabel(),
+          route: '/today',
+        ),
+      );
     } catch (e) {
       _log('[alarm] fired-notification skipped: $e');
     }
@@ -2637,21 +2686,23 @@ class AppState extends ChangeNotifier {
       _resetLivePedometer(); // fresh live step count for this connected session
       dbCounts = await LocalDb.counts();
       unawaited(
-        _kickSyncBurst(kickFirst: false).then((report) async {
-          _log(
-            'Backlog drained: ${report.records} records in ${report.batches} '
-            'batches (${report.complete ? "complete" : "stopped early"}).',
-          );
-          dbCounts = await LocalDb.counts();
-          // Re-evaluate the high-frequency wake window now the backlog landed.
-          await _refreshHighFreqWakeWindow();
-          // The whole backlog landed → heavy foreground finalize (full sleep
-          // staging + 24-h spectra over every stale day).
-          _deriveScheduler.requestHeavy();
-          notifyListeners();
-        }).catchError((Object e) {
-          _log('Background sync burst failed: $e');
-        }),
+        _kickSyncBurst(kickFirst: false)
+            .then((report) async {
+              _log(
+                'Backlog drained: ${report.records} records in ${report.batches} '
+                'batches (${report.complete ? "complete" : "stopped early"}).',
+              );
+              dbCounts = await LocalDb.counts();
+              // Re-evaluate the high-frequency wake window now the backlog landed.
+              await _refreshHighFreqWakeWindow();
+              // The whole backlog landed → heavy foreground finalize (full sleep
+              // staging + 24-h spectra over every stale day).
+              _deriveScheduler.requestHeavy();
+              notifyListeners();
+            })
+            .catchError((Object e) {
+              _log('Background sync burst failed: $e');
+            }),
       );
       _startBackfillTimer();
     } catch (e) {
@@ -2705,7 +2756,8 @@ class AppState extends ChangeNotifier {
         // (IosBleRestore, armed from _onEngineState) already holds a
         // no-timeout pending connect there, and a second competing pending
         // connect from Dart would fight it for the peripheral.
-        final osPending = Platform.isAndroid &&
+        final osPending =
+            Platform.isAndroid &&
             (_background || attempt > _directAttemptsBeforeOsFallback);
         if (osPending) {
           connected = await engine.waitForOsAutoConnect(
@@ -2753,18 +2805,20 @@ class AppState extends ChangeNotifier {
           // GET_ALARM readback is parked (unconfirmed format) — see ble_engine.
           _log('Reconnected — live on; draining backlog in background.');
           unawaited(
-            _kickSyncBurst(kickFirst: false).then((report) async {
-              dbCounts = await LocalDb.counts();
-              _log('Reconnect backlog drained: ${report.records} records.');
-              // Re-evaluate the high-frequency wake window now the backlog
-              // landed.
-              await _refreshHighFreqWakeWindow();
-              // Backlog (often an overnight gap) just landed → derive it.
-              _deriveScheduler.requestHeavy();
-              notifyListeners();
-            }).catchError((Object e) {
-              _log('Reconnect sync burst failed: $e');
-            }),
+            _kickSyncBurst(kickFirst: false)
+                .then((report) async {
+                  dbCounts = await LocalDb.counts();
+                  _log('Reconnect backlog drained: ${report.records} records.');
+                  // Re-evaluate the high-frequency wake window now the backlog
+                  // landed.
+                  await _refreshHighFreqWakeWindow();
+                  // Backlog (often an overnight gap) just landed → derive it.
+                  _deriveScheduler.requestHeavy();
+                  notifyListeners();
+                })
+                .catchError((Object e) {
+                  _log('Reconnect sync burst failed: $e');
+                }),
           );
           _startBackfillTimer();
           break;
@@ -3144,7 +3198,9 @@ class AppState extends ChangeNotifier {
       if (!breathingActive) return; // session ended while we awaited
       breathingResult = res;
       notifyListeners();
-      final score = res['ok'] == true ? (res['score'] as num?)?.toDouble() : null;
+      final score = res['ok'] == true
+          ? (res['score'] as num?)?.toDouble()
+          : null;
       unawaited(BreathingLiveActivity.update(coherenceScore: score));
     } catch (_) {
       /* best-effort; keep the last good result on screen rather than erroring */
@@ -3402,10 +3458,8 @@ class AppState extends ChangeNotifier {
       return;
     }
     final tracker = RouteTracker(
-      sink: (batch) => LocalDb.appendRoutePoints(
-        id,
-        [for (final p in batch) p.toRow(id)],
-      ),
+      sink: (batch) =>
+          LocalDb.appendRoutePoints(id, [for (final p in batch) p.toRow(id)]),
       zoneNow: () => _zoneFor(activeWorkout?.currentHr ?? 0),
     );
     _routeTracker = tracker;
@@ -3495,7 +3549,10 @@ class AppState extends ChangeNotifier {
       for (final row in rows) {
         final startSec = (row['start_ts'] as num?)?.toInt();
         final ageMs = startSec == null ? null : nowMs - startSec * 1000;
-        if (!resumed && ageMs != null && ageMs >= 0 && ageMs <= _kMaxLiveWorkoutAgeMs) {
+        if (!resumed &&
+            ageMs != null &&
+            ageMs >= 0 &&
+            ageMs <= _kMaxLiveWorkoutAgeMs) {
           resumed = true;
           final startMs = startSec! * 1000;
           final id = row['id'] as String? ?? 'w$startMs';
@@ -3519,7 +3576,9 @@ class AppState extends ChangeNotifier {
             const Duration(seconds: 1),
             (_) => _tickWorkout(),
           );
-          _log('[workout] resumed a live session still running after restart (id=$id).');
+          _log(
+            '[workout] resumed a live session still running after restart (id=$id).',
+          );
           // Re-arm GPS for the REST of the session. Without this a resumed
           // workout recorded no further route at all: the timer/calories/strain
           // all came back, the map silently never did, and the athlete only
@@ -3532,7 +3591,9 @@ class AppState extends ChangeNotifier {
           ScreenWake.enable();
         } else {
           await LocalDb.putSession({...row, 'status': 'done'});
-          _log('[workout] finalized a stale live-session row from a previous run (id=${row['id']}).');
+          _log(
+            '[workout] finalized a stale live-session row from a previous run (id=${row['id']}).',
+          );
         }
       }
       if (resumed) notifyListeners();
@@ -3820,9 +3881,9 @@ class LiveWorkoutState {
   /// The persisted `zone_min` payload: minutes in Z1..Z5 (index 0 = Z1 — the
   /// 5-element shape the Time-in-Zones bar parses). Z0 (rest) is excluded.
   List<double> zoneMinutes() => [
-        for (var z = 1; z <= 5; z++)
-          double.parse((zoneSeconds[z] / 60.0).toStringAsFixed(2)),
-      ];
+    for (var z = 1; z <= 5; z++)
+      double.parse((zoneSeconds[z] / 60.0).toStringAsFixed(2)),
+  ];
 
   LiveWorkoutState({
     required this.startTime,

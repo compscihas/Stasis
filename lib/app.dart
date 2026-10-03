@@ -26,6 +26,7 @@ import 'ui/workouts/workouts_screen.dart';
 import 'ui/activity/live_session_screen.dart';
 import 'ui/ai/ai_breakdown_screen.dart';
 import 'ui/journal/journal_compose_screen.dart';
+import 'ui/journal/morning_checkin_screen.dart';
 import 'ui/stress/calm_breathing_screen.dart';
 import 'telemetry/telemetry_service.dart';
 
@@ -45,7 +46,7 @@ class _StasisAIAppState extends State<StasisAIApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<AppState>().attachCoachConfig(context.read<CoachConfig>());
-      
+
       final app = context.read<AppState>();
       if (app.isPaired) app.openSession();
     });
@@ -61,7 +62,8 @@ class _StasisAIAppState extends State<StasisAIApp> with WidgetsBindingObserver {
   void didChangePlatformBrightness() {
     // Keep the app in sync with the OS when the user is on "System".
     context.read<ThemeController>().updatePlatformBrightness(
-        WidgetsBinding.instance.platformDispatcher.platformBrightness);
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    );
   }
 
   @override
@@ -137,8 +139,8 @@ class _Gate extends StatelessWidget {
       // Underlay while the boot splash covers the loading phase — and what the
       // user lands on if the splash's safety cap fires before init completes.
       AppRoute.loading => Scaffold(
-          body: Center(child: CircularProgressIndicator(color: AppColors.coral)),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppColors.coral)),
+      ),
       AppRoute.welcome => const WelcomeScreen(),
       AppRoute.pairing => PairingScreen(),
       AppRoute.profile => const ProfileSetupScreen(),
@@ -159,11 +161,11 @@ class _Shell extends StatefulWidget {
 
 class _ShellState extends State<_Shell> {
   // Restore the last-selected tab so a relaunch lands where the user left off.
-  late int _index =
-      Prefs.getInt(Prefs.shellTab, 0).clamp(0, _nav.length - 1);
+  late int _index = Prefs.getInt(Prefs.shellTab, 0).clamp(0, _nav.length - 1);
   late final _controller = PageController(initialPage: _index);
 
   AppState? _app;
+  bool _morningCheckinOpen = false;
 
   @override
   void initState() {
@@ -175,7 +177,19 @@ class _ShellState extends State<_Shell> {
     _app!.screenRequest.addListener(_onScreenRequest);
     // Cold launch from a tapped notification: the route may already be set before
     // this shell mounted (so the listener never fired). Consume it once attached.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Resolve the OS cold-start notification route before opening the debug
+      // preview. Otherwise both startup paths can push Check-In back-to-back.
+      await _app!.initialNotificationRouting;
+      if (!mounted) return;
+      // Desktop preview opens Check-In over Today so finishing the form can
+      // return to the normal app shell instead of leaving the root screen stuck.
+      if (const bool.fromEnvironment('STASIS_PREVIEW_MORNING_CHECKIN') &&
+          !_app!.morningCheckinHandledToday &&
+          _app!.screenRequest.value == null) {
+        _app!.markMorningCheckinHandled();
+        _app!.screenRequest.value = kRouteMorningCheckin;
+      }
       _onNavRequest();
       _onScreenRequest();
     });
@@ -197,11 +211,21 @@ class _ShellState extends State<_Shell> {
     _app!.screenRequest.value = null;
     if (!mounted) return;
     final Widget? screen = switch (s) {
-      kRouteAiMorning =>
-        const AiBreakdownScreen(period: BriefingPeriod.morning),
-      kRouteAiEvening =>
-        const AiBreakdownScreen(period: BriefingPeriod.evening),
+      kRouteAiMorning => const AiBreakdownScreen(
+        period: BriefingPeriod.morning,
+      ),
+      kRouteAiEvening => const AiBreakdownScreen(
+        period: BriefingPeriod.evening,
+      ),
       kRouteJournalCompose => const JournalComposeScreen(),
+      kRouteMorningCheckin => const MorningCheckinScreen(),
+      kRouteMorningCheckinGood => const MorningCheckinScreen(
+        initialMood: 'good',
+      ),
+      kRouteMorningCheckinOkay => const MorningCheckinScreen(
+        initialMood: 'okay',
+      ),
+      kRouteMorningCheckinLow => const MorningCheckinScreen(initialMood: 'low'),
       // "Did you work out?" auto-detect tap → focused log/adjust review, on top
       // of the Workouts tab (issue #113). WorkoutsScreen is already imported.
       kRouteWorkoutSuggestion => const WorkoutSuggestionScreen(),
@@ -212,8 +236,26 @@ class _ShellState extends State<_Shell> {
       _ => null,
     };
     if (screen == null) return;
+    final isMorningCheckin = switch (s) {
+      kRouteMorningCheckin ||
+      kRouteMorningCheckinGood ||
+      kRouteMorningCheckinOkay ||
+      kRouteMorningCheckinLow => true,
+      _ => false,
+    };
+    // A preview launch and a notification launch can both request the same
+    // screen during startup. Keep only one check-in route on the stack; a
+    // second route would make Done appear to ask the questions twice.
+    if (isMorningCheckin) {
+      if (_morningCheckinOpen) return;
+      _morningCheckinOpen = true;
+      _app!.markMorningCheckinHandled();
+    }
     Navigator.of(context)
-        .push(themedRoute((_) => screen, name: screen.runtimeType.toString()));
+        .push(themedRoute((_) => screen, name: screen.runtimeType.toString()))
+        .whenComplete(() {
+          if (isMorningCheckin) _morningCheckinOpen = false;
+        });
   }
 
   // Built fresh on every build (not const) so a theme flip re-colours every tab,
@@ -221,12 +263,12 @@ class _ShellState extends State<_Shell> {
   // ignore: prefer_const_constructors — must be fresh instances so the
   // kept-alive tabs re-colour on a theme flip (const would canonicalize them).
   List<Widget> get _pages => [
-        TodayScreen(),
-        SleepScreen(),
-        HeartScreen(),
-        BodyScreen(),
-        WorkoutsScreen(),
-      ];
+    TodayScreen(),
+    SleepScreen(),
+    HeartScreen(),
+    BodyScreen(),
+    WorkoutsScreen(),
+  ];
 
   // Tab icons (see lib/ui/kit/os_icons.dart for the pack each one resolves to).
   static const _nav = [
@@ -312,11 +354,7 @@ class ShellScaffold extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ?banner,
-            FloatingNavPill(
-              items: items,
-              index: index,
-              onSelect: onSelect,
-            ),
+            FloatingNavPill(items: items, index: index, onSelect: onSelect),
           ],
         ),
       ),
@@ -332,17 +370,24 @@ class _LiveBanner extends StatefulWidget {
   State<_LiveBanner> createState() => _LiveBannerState();
 }
 
-class _LiveBannerState extends State<_LiveBanner> with SingleTickerProviderStateMixin {
+class _LiveBannerState extends State<_LiveBanner>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
   }
 
   @override
-  void dispose() { _pulse.dispose(); super.dispose(); }
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   String _fmt(Duration d) =>
       '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
@@ -356,34 +401,64 @@ class _LiveBannerState extends State<_LiveBanner> with SingleTickerProviderState
       child: GestureDetector(
         onTap: () {
           HapticFeedback.selectionClick();
-          Navigator.of(context).push(themedRoute(
-            (_) => LiveSessionScreen(workoutId: w.workoutId, type: w.type),
-            name: 'LiveSessionScreen'));
+          Navigator.of(context).push(
+            themedRoute(
+              (_) => LiveSessionScreen(workoutId: w.workoutId, type: w.type),
+              name: 'LiveSessionScreen',
+            ),
+          );
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.x4, vertical: Sp.x3),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.x4,
+            vertical: Sp.x3,
+          ),
           decoration: BoxDecoration(
             color: AppColors.night,
             borderRadius: BorderRadius.circular(R.pill),
             boxShadow: Shadows.lift,
           ),
-          child: Row(children: [
-            FadeTransition(opacity: _pulse, child: Container(
-              width: 10, height: 10,
-              decoration: BoxDecoration(color: AppColors.coral, shape: BoxShape.circle))),
-            const SizedBox(width: Sp.x3),
-            Text('LIVE · ${w.type.toUpperCase()}', style: AppText.overline.copyWith(color: Colors.white70)),
-            const Spacer(),
-            AppIcon(OsIcon.heart, size: 15, color: AppColors.coral),
-            const SizedBox(width: 4),
-            Text(w.currentHr > 0 ? '${w.currentHr}' : '—',
-                style: AppText.metricSm.copyWith(color: Colors.white, fontSize: 16)),
-            const SizedBox(width: Sp.x4),
-            Text(_fmt(w.elapsed), style: AppText.metricSm.copyWith(
-                color: Colors.white60, fontSize: 15, fontFeatures: [const FontFeature.tabularFigures()])),
-            const SizedBox(width: Sp.x2),
-            const AppIcon(OsIcon.arrowRight, size: 16, color: Colors.white38),
-          ]),
+          child: Row(
+            children: [
+              FadeTransition(
+                opacity: _pulse,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: AppColors.coral,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Sp.x3),
+              Text(
+                'LIVE · ${w.type.toUpperCase()}',
+                style: AppText.overline.copyWith(color: Colors.white70),
+              ),
+              const Spacer(),
+              AppIcon(OsIcon.heart, size: 15, color: AppColors.coral),
+              const SizedBox(width: 4),
+              Text(
+                w.currentHr > 0 ? '${w.currentHr}' : '—',
+                style: AppText.metricSm.copyWith(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: Sp.x4),
+              Text(
+                _fmt(w.elapsed),
+                style: AppText.metricSm.copyWith(
+                  color: Colors.white60,
+                  fontSize: 15,
+                  fontFeatures: [const FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: Sp.x2),
+              const AppIcon(OsIcon.arrowRight, size: 16, color: Colors.white38),
+            ],
+          ),
         ),
       ),
     );

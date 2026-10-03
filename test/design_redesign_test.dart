@@ -125,19 +125,23 @@ void main() {
                   onTap: () => taps++,
                   child: const BigStat(value: '48', unit: 'ms', label: 'HRV'),
                 ),
-                const BentoTile(
+                BentoTile(
                   tone: BentoTone.accent,
-                  child: BigStat(value: '640', unit: 'kcal', label: 'Calories'),
+                  child: const BigStat(
+                    value: '640',
+                    unit: 'kcal',
+                    label: 'Calories',
+                  ),
                 ),
               ],
               right: [
-                const BentoTile(
+                BentoTile(
                   tone: BentoTone.ink,
-                  child: BigStat(value: '52', unit: 'bpm', label: 'RHR'),
+                  child: const BigStat(value: '52', unit: 'bpm', label: 'RHR'),
                 ),
-                const BentoTile(
+                BentoTile(
                   tone: BentoTone.soft,
-                  child: BigStat.dash(label: 'O2'),
+                  child: const BigStat.dash(label: 'O2'),
                 ),
               ],
             ),
@@ -151,9 +155,13 @@ void main() {
         expect(find.text('—'), findsOneWidget); // honest dash
         expect(t.takeException(), isNull);
 
-        // Ink tile's number uses the invariant paper-on-night ink.
+        // Dark mode keeps the inverted white-on-char tile; light mode uses a
+        // pale gray tile with normal dark ink for readability.
         final rhr = t.widget<Text>(find.text('52'));
-        expect(rhr.style?.color, AppColors.onNight);
+        expect(
+          rhr.style?.color,
+          p.isDark ? AppColors.onNight : AppColors.ink,
+        );
         // Accent tile's number is white.
         final cal = t.widget<Text>(find.text('640'));
         expect(cal.style?.color, Colors.white);

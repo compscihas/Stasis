@@ -27,6 +27,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'notification_event.dart';
 import 'notification_ids.dart';
+import 'tap_router.dart';
 
 /// The next wall-clock instant at [hour]:[minute] — optionally the next
 /// [weekday] — strictly after [now], in [now]'s own timezone.
@@ -83,32 +84,32 @@ class NotificationService {
   // ── Channels (one per category — keep them disjoint) ────────────────────────
   static const AndroidNotificationChannel _deviceChannel =
       AndroidNotificationChannel(
-    'device_alerts',
-    'Device alerts',
-    description: 'Band battery and charging',
-    importance: Importance.high,
-  );
+        'device_alerts',
+        'Device alerts',
+        description: 'Band battery and charging',
+        importance: Importance.high,
+      );
   static const AndroidNotificationChannel _healthChannel =
       AndroidNotificationChannel(
-    'health',
-    'Health alerts',
-    description: 'Illness, unusual physiology and temperature signals',
-    importance: Importance.max,
-  );
+        'health',
+        'Health alerts',
+        description: 'Illness, unusual physiology and temperature signals',
+        importance: Importance.max,
+      );
   static const AndroidNotificationChannel _recoveryChannel =
       AndroidNotificationChannel(
-    'recovery',
-    'Recovery',
-    description: 'Daily recovery readiness from your own data',
-    importance: Importance.defaultImportance,
-  );
+        'recovery',
+        'Recovery',
+        description: 'Daily recovery readiness from your own data',
+        importance: Importance.defaultImportance,
+      );
   static const AndroidNotificationChannel _remindersChannel =
       AndroidNotificationChannel(
-    'reminders',
-    'Reminders',
-    description: 'Wind-down, movement nudges, goals and weekly recaps',
-    importance: Importance.defaultImportance,
-  );
+        'reminders',
+        'Reminders',
+        description: 'Wind-down, movement nudges, goals and weekly recaps',
+        importance: Importance.defaultImportance,
+      );
 
   // ── Fixed ids: device alerts + scheduled reminders (disjoint low band) ───────
   static const int idLowBattery = 1001;
@@ -116,9 +117,13 @@ class NotificationService {
   static const int idWindDown = 2002; // scheduled daily ("time to sleep")
   static const int idWeeklyRecap = 2003; // scheduled weekly
   static const int idJournalLog = 2004; // scheduled daily ("log your day")
-  static const int idMorningBrief = 2005; // scheduled daily (AI morning briefing)
+  static const int idMorningBrief =
+      2005; // scheduled daily (AI morning briefing)
   static const int idEveningBrief = 2006; // scheduled daily (AI evening recap)
-  static const int idStillness = 2200; // provisional one-shot ("time to move", issue #123)
+  static const int idMorningCheckin =
+      2007; // scheduled daily wellbeing check-in
+  static const int idStillness =
+      2200; // provisional one-shot ("time to move", issue #123)
 
   /// Hydration reminders occupy a contiguous slot band [idWaterBase ..
   /// idWaterBase + maxWaterSlots) — one daily-repeating slot per fire time across
@@ -130,11 +135,11 @@ class NotificationService {
   static const int kServerIdBase = 2000;
 
   AndroidNotificationChannel _channelFor(NotifCategory c) => switch (c) {
-        NotifCategory.health => _healthChannel,
-        NotifCategory.recovery => _recoveryChannel,
-        NotifCategory.reminders => _remindersChannel,
-        NotifCategory.device => _deviceChannel,
-      };
+    NotifCategory.health => _healthChannel,
+    NotifCategory.recovery => _recoveryChannel,
+    NotifCategory.reminders => _remindersChannel,
+    NotifCategory.device => _deviceChannel,
+  };
 
   Importance _importanceFor(NotifCategory c) =>
       c == NotifCategory.health ? Importance.max : Importance.defaultImportance;
@@ -149,21 +154,54 @@ class NotificationService {
       tzdata.initializeTimeZones();
       final name = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(name));
-    } catch (_) {/* tz stays UTC; scheduling still works, just in UTC wall-clock */}
+    } catch (_) {
+      /* tz stays UTC; scheduling still works, just in UTC wall-clock */
+    }
 
-    const AndroidInitializationSettings android =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
-    const DarwinInitializationSettings darwin = DarwinInitializationSettings(
+    const AndroidInitializationSettings android = AndroidInitializationSettings(
+      '@mipmap/launcher_icon',
+    );
+    final DarwinInitializationSettings darwin = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          'MORNING_CHECKIN',
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              'mood_good',
+              '😊 Good',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              'mood_okay',
+              '😐 Okay',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              'mood_low',
+              '☹️ Not great',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+          ],
+        ),
+      ],
     );
     await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: darwin),
+      InitializationSettings(android: android, iOS: darwin),
       onDidReceiveNotificationResponse: _onTap,
     );
-    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImpl?.createNotificationChannel(_deviceChannel);
     await androidImpl?.createNotificationChannel(_healthChannel);
     await androidImpl?.createNotificationChannel(_recoveryChannel);
@@ -172,19 +210,31 @@ class NotificationService {
   }
 
   void _onTap(NotificationResponse r) {
-    final route = r.payload;
+    final route = switch (r.actionId) {
+      'mood_good' => kRouteMorningCheckinGood,
+      'mood_okay' => kRouteMorningCheckinOkay,
+      'mood_low' => kRouteMorningCheckinLow,
+      _ => r.payload,
+    };
     if (route != null && route.isNotEmpty) _taps.add(route);
   }
 
   /// If the app was launched by tapping a notification, replay its route once.
-  Future<void> consumeLaunchRoute() async {
+  Future<String?> consumeLaunchRoute() async {
     try {
       final d = await _plugin.getNotificationAppLaunchDetails();
       if (d?.didNotificationLaunchApp ?? false) {
-        final route = d?.notificationResponse?.payload;
-        if (route != null && route.isNotEmpty) _taps.add(route);
+        final response = d?.notificationResponse;
+        final route = switch (response?.actionId) {
+          'mood_good' => kRouteMorningCheckinGood,
+          'mood_okay' => kRouteMorningCheckinOkay,
+          'mood_low' => kRouteMorningCheckinLow,
+          _ => response?.payload,
+        };
+        if (route != null && route.isNotEmpty) return route;
       }
     } catch (_) {}
+    return null;
   }
 
   /// Request notification permission once (iOS always; Android 13+). Cached.
@@ -233,15 +283,23 @@ class NotificationService {
       granted = await request();
     } else {
       granted = true;
-      final ios = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (ios != null) {
-        granted = await ios.requestPermissions(
-                alert: true, badge: true, sound: true) ??
+        granted =
+            await ios.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            ) ??
             false;
       }
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android != null) {
         granted = await android.requestNotificationsPermission() ?? false;
       }
@@ -274,11 +332,17 @@ class NotificationService {
       final probe = debugProbePermission;
       if (probe != null) return await probe();
       await init();
-      final ios = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
-      if (ios != null) return (await ios.checkPermissions())?.isEnabled ?? false;
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      if (ios != null) {
+        return (await ios.checkPermissions())?.isEnabled ?? false;
+      }
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android != null) {
         return await android.areNotificationsEnabled() ?? false;
       }
@@ -288,7 +352,7 @@ class NotificationService {
     }
   }
 
-  NotificationDetails _details(NotifCategory c) {
+  NotificationDetails _details(NotifCategory c, {String? categoryIdentifier}) {
     final ch = _channelFor(c);
     return NotificationDetails(
       android: AndroidNotificationDetails(
@@ -298,8 +362,27 @@ class NotificationService {
         importance: _importanceFor(c),
         priority: _priorityFor(c),
         icon: '@mipmap/launcher_icon',
+        actions: categoryIdentifier == 'MORNING_CHECKIN'
+            ? <AndroidNotificationAction>[
+                AndroidNotificationAction(
+                  'mood_good',
+                  '😊 Good',
+                  showsUserInterface: true,
+                ),
+                AndroidNotificationAction(
+                  'mood_okay',
+                  '😐 Okay',
+                  showsUserInterface: true,
+                ),
+                AndroidNotificationAction(
+                  'mood_low',
+                  '☹️ Not great',
+                  showsUserInterface: true,
+                ),
+              ]
+            : null,
       ),
-      iOS: const DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(categoryIdentifier: categoryIdentifier),
     );
   }
 
@@ -352,8 +435,12 @@ class NotificationService {
   // ── Scheduling (wall-clock recurring nudges) ────────────────────────────────
 
   tz.TZDateTime _nextInstanceOf(int hour, int minute, {int? weekday}) =>
-      nextInstanceOf(tz.TZDateTime.now(tz.local), hour, minute,
-          weekday: weekday);
+      nextInstanceOf(
+        tz.TZDateTime.now(tz.local),
+        hour,
+        minute,
+        weekday: weekday,
+      );
 
   Future<void> scheduleDaily({
     required int id,
@@ -363,6 +450,7 @@ class NotificationService {
     required int hour,
     required int minute,
     String? route,
+    String? categoryIdentifier,
     bool skipToday = false,
   }) async {
     try {
@@ -384,7 +472,7 @@ class NotificationService {
         title,
         body,
         when,
-        _details(category),
+        _details(category, categoryIdentifier: categoryIdentifier),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,

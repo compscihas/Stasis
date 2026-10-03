@@ -252,27 +252,22 @@ class BentoTile extends StatelessWidget {
           Elevation.shadows(1, dark: dark),
         );
       case BentoTone.ink:
-        // Inverted near-black tile — invariant char so it reads as THE dark
-        // tile in light mode and as a deliberately deeper well in dark mode.
+        // Keep the inverted dark tile in night mode. In light mode, use a
+        // lifted gray tile so the overall neon style remains consistent and
+        // the dark foreground stays readable.
         return (
-          dark ? AppColors.nightAlt : AppColors.night,
+          dark ? AppColors.nightAlt : AppColors.surfaceAlt,
           ToneColors(
-            fg: AppColors.onNight,
-            fgMuted: AppColors.onNightSoft,
-            fgFaint: AppColors.onNightSoft.withValues(alpha: 0.55),
-            accent: Color.lerp(a, Colors.white, dark ? 0.15 : 0.25)!,
+            fg: dark ? AppColors.onNight : AppColors.ink,
+            fgMuted: dark ? AppColors.onNightSoft : AppColors.inkSoft,
+            fgFaint: dark ? AppColors.onNightSoft : AppColors.inkMuted,
+            accent: dark ? Color.lerp(a, Colors.white, 0.15)! : a,
           ),
-          dark ? Border.all(color: const Color(0xFF3D362C)) : null,
+          dark ? Border.all(color: const Color(0xFF3B4964)) : null,
           Elevation.shadows(1, dark: dark),
         );
       case BentoTone.accent:
-        // The board's "highlighted" card — white ink on a tonal (not
-        // full-saturation) fill of the domain colour. Full brightness/
-        // saturation is reserved for exactly one thing in the app (the
-        // readiness ring's glow); this used to be a solid vivid card, which
-        // competed with that ring for attention. Same AppColors.tonalFill
-        // recipe as BentoTone.soft/Tag/DeltaChip — white text still pops
-        // cleanly against it, same as it did against the old solid fill.
+        // A restrained tinted surface with a clearly visible neon edge/glow.
         return (
           AppColors.tonalFill(a),
           ToneColors(
@@ -281,8 +276,16 @@ class BentoTile extends StatelessWidget {
             fgFaint: Colors.white.withValues(alpha: 0.55),
             accent: Colors.white,
           ),
-          null,
-          dark ? const [] : Elevation.shadows(1, dark: false),
+          dark ? Border.all(color: a.withValues(alpha: 0.72)) : null,
+          dark
+              ? [
+                  BoxShadow(
+                    color: a.withValues(alpha: 0.22),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : Elevation.shadows(1, dark: false),
         );
       case BentoTone.soft:
         // Quiet tint of the domain colour; ink stays the normal mode ink.
@@ -310,8 +313,7 @@ class BentoTile extends StatelessWidget {
     final (fill, colors, border, shadow) = _resolve();
     final br = BorderRadius.circular(radius);
     Widget tile = Container(
-      constraints:
-          minHeight > 0 ? BoxConstraints(minHeight: minHeight) : null,
+      constraints: minHeight > 0 ? BoxConstraints(minHeight: minHeight) : null,
       decoration: BoxDecoration(
         color: fill,
         borderRadius: br,

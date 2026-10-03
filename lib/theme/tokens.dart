@@ -1,7 +1,4 @@
-// Design tokens — OpenStrap "Ember on Paper" (day) / "Ember on Char" (night).
-// Day: warm off-white surfaces, near-black ink, a single confident coral accent.
-// Night: the paper burns down to warm charcoal — same ember, never cold black.
-// The accent stays coral across both modes; warmth is the constant, not lightness.
+// Design tokens — high-contrast neon on cool graphite, in dark and light modes.
 //
 // Big tabular numbers (Space Grotesk) over clean body (Inter) — see theme.dart.
 // The honesty system (confidence dots, est./relative/beta labels) is preserved.
@@ -16,7 +13,7 @@ import 'package:flutter/material.dart';
 /// Light-sleep stage colour — a soft light orange (warm, distinct from the
 /// coral REM/Deep tones; replaces the old cool-blue which clashed with the
 /// ember palette).
-const Color kLightStageColor = Color(0xFFF6B07A);
+const Color kLightStageColor = Color(0xFFB96A20);
 
 /// A complete set of mode-varying colour roles. Two const instances exist
 /// ([kLightPalette], [kDarkPalette]); the active one is swapped at runtime.
@@ -101,68 +98,66 @@ class Palette {
   bool get isDark => brightness == Brightness.dark;
 }
 
-/// Day — "Ember on Paper". The original, beloved palette, unchanged in value.
+/// Light neon — cool pale-gray surfaces with readable dark ink and vivid accents.
 const Palette kLightPalette = Palette(
   brightness: Brightness.light,
-  bg: Color(0xFFF4F1EC), // warm paper background
-  surface: Color(0xFFFFFFFF), // cards
-  surfaceAlt: Color(0xFFECE7DF), // inset / skeleton base
-  surfaceSunk: Color(0xFFEDE9E1), // subtle wells
-  cool: Color(0xFFE7EBF5), // cool secondary section
-  coolInk: Color(0xFF2B3350), // ink on the cool surface
-  divider: Color(0xFFE6E0D6),
-  ink: Color(0xFF16130F), // near-black, warm
-  inkSoft: Color(0xFF6B6157), // secondary
-  inkMuted: Color(0xFFA59C90), // tertiary / placeholders
-  coral: Color(0xFFFF5A36),
-  coralDeep: Color(0xFFE8431F),
-  coralSoft: Color(0xFFFFE7DF), // tint fill
-  coralInk: Color(0xFF7A2A16), // ink on coralSoft
-  brand: Color(0xFF12879B), // controlled cyan/teal — calm, not orange
-  brandDeep: Color(0xFF0C6C7D),
-  brandSoft: Color(0xFFDCF2F4), // tint fill
-  brandInk: Color(0xFF0A4650), // ink on brandSoft
-  good: Color(0xFF2BB673),
-  goodSoft: Color(0xFFDBF3E7),
-  warn: Color(0xFFF5A623),
-  warnSoft: Color(0xFFFBEBCF),
-  bad: Color(0xFFE5484D),
-  badSoft: Color(0xFFFAE0E0),
-  confLow: Color(0xFFC9C0B4),
-  loadDetraining: Color(0xFF7CA8F0),
+  bg: Color(0xFFF1F3F8),
+  surface: Color(0xFFF9FAFD),
+  surfaceAlt: Color(0xFFE5E9F2),
+  surfaceSunk: Color(0xFFE9ECF4),
+  cool: Color(0xFFE4EAF5),
+  coolInk: Color(0xFF27334B),
+  divider: Color(0xFFD4DAE7),
+  ink: Color(0xFF171B29),
+  inkSoft: Color(0xFF4D566D),
+  inkMuted: Color(0xFF707A91),
+  coral: Color(0xFFD73779),
+  coralDeep: Color(0xFFB92261),
+  coralSoft: Color(0xFFF9E3ED),
+  coralInk: Color(0xFF702044),
+  brand: Color(0xFF087D9C),
+  brandDeep: Color(0xFF05627D),
+  brandSoft: Color(0xFFDCEFF4),
+  brandInk: Color(0xFF124956),
+  good: Color(0xFF138453),
+  goodSoft: Color(0xFFDDF3E8),
+  warn: Color(0xFF9A6400),
+  warnSoft: Color(0xFFF7EED7),
+  bad: Color(0xFFC9324A),
+  badSoft: Color(0xFFF8E1E5),
+  confLow: Color(0xFF777F91),
+  loadDetraining: Color(0xFF2777C8),
 );
 
-/// Night — "Ember on Char". Warm charcoal, never cold black. Ink is the paper
-/// colour; coral lifts ~8% so it reads cleanly on dark; the pale "*Soft" tints
-/// become deep warm ember/earth fills so light ink sits on them comfortably.
+/// Dark neon — deep blue-black graphite with bright, multi-hue accents.
 const Palette kDarkPalette = Palette(
   brightness: Brightness.dark,
-  bg: Color(0xFF14110D), // warm near-black char
-  surface: Color(0xFF1E1A15), // cards, lifted off bg
-  surfaceAlt: Color(0xFF2A251F), // inset / skeleton base
-  surfaceSunk: Color(0xFF100E0A), // wells, darker than bg
-  cool: Color(0xFF20242E), // cool secondary, darkened
-  coolInk: Color(0xFFC3CADB), // ink on the cool surface
-  divider: Color(0xFF302A22),
-  ink: Color(0xFFF1ECE3), // warm off-white — the paper becomes the ink
-  inkSoft: Color(0xFFB6AB9C),
-  inkMuted: Color(0xFF7E7466),
-  coral: Color(0xFFFF6B47), // a hair brighter on dark
-  coralDeep: Color(0xFFFF8159), // "deep" = stronger/lighter coral on dark text
-  coralSoft: Color(0xFF3A2018), // deep warm ember tint fill
-  coralInk: Color(0xFFFFB59E), // light coral text on coralSoft
-  brand: Color(0xFF3FD3E3), // a hair brighter on dark, same family as light
-  brandDeep: Color(0xFF63E3EF),
-  brandSoft: Color(0xFF102E32), // deep teal tint fill
-  brandInk: Color(0xFFA6ECF2), // light cyan text on brandSoft
-  good: Color(0xFF34C988),
-  goodSoft: Color(0xFF15281F),
-  warn: Color(0xFFF7B53A),
-  warnSoft: Color(0xFF31280F),
-  bad: Color(0xFFF26168),
-  badSoft: Color(0xFF331A1B),
-  confLow: Color(0xFF5A5248),
-  loadDetraining: Color(0xFF8FB4F2),
+  bg: Color(0xFF090C15),
+  surface: Color(0xFF151A27),
+  surfaceAlt: Color(0xFF20283A),
+  surfaceSunk: Color(0xFF070A11),
+  cool: Color(0xFF1C2538),
+  coolInk: Color(0xFFD5DDF2),
+  divider: Color(0xFF303B51),
+  ink: Color(0xFFF3F6FF),
+  inkSoft: Color(0xFFB8C2D9),
+  inkMuted: Color(0xFF8491AA),
+  coral: Color(0xFFFF4F9A),
+  coralDeep: Color(0xFFFF78B2),
+  coralSoft: Color(0xFF351A2B),
+  coralInk: Color(0xFFFFB4D2),
+  brand: Color(0xFF4DEBFF),
+  brandDeep: Color(0xFF8AF3FF),
+  brandSoft: Color(0xFF112D38),
+  brandInk: Color(0xFFB9F7FF),
+  good: Color(0xFF54F5A6),
+  goodSoft: Color(0xFF153427),
+  warn: Color(0xFFFFC857),
+  warnSoft: Color(0xFF382B16),
+  bad: Color(0xFFFF627C),
+  badSoft: Color(0xFF391C29),
+  confLow: Color(0xFF68748B),
+  loadDetraining: Color(0xFF65B9FF),
 );
 
 /// Palette — warm paper + coral. Same public names as before; mode-varying roles
@@ -193,8 +188,8 @@ class AppColors {
 
   // ── Dark hero surfaces — INVARIANT across modes (always-dark cards: the
   //    device card, the live-workout screen, splash overlays). ──
-  static const night = Color(0xFF181613);
-  static const nightAlt = Color(0xFF24211D);
+  static const night = Color(0xFF090C15);
+  static const nightAlt = Color(0xFF151A27);
 
   // ── Ink ramp for permanently-dark surfaces (the live session screen) ──
   //
@@ -259,9 +254,9 @@ class AppColors {
   static Color get loadCaution => active.warn;
   static Color get loadHigh => active.bad;
 
-  // ── Live-session ember glow — INVARIANT (always on the dark live screen). ──
-  static const glow1 = Color(0xFFFF7A4D);
-  static const glow2 = Color(0xFFFF3D1F);
+  // ── Live-session neon glow — INVARIANT (always on the dark live screen). ──
+  static const glow1 = Color(0xFF4DEBFF);
+  static const glow2 = Color(0xFFFF4F9A);
 
   /// Color band for a normalized 0..1 score. Coral-forward: low scores trend
   /// deep, high scores vivid; green reserved for genuinely strong.
@@ -342,9 +337,9 @@ class AppColors {
   /// approach the readiness ring's glow, the one place full brightness is
   /// reserved for.
   static Color tonalFill(Color hue) => Color.alphaBlend(
-        hue.withValues(alpha: isDark ? 0.09 : 0.13),
-        Elevation.surfaceAt(1),
-      );
+    hue.withValues(alpha: isDark ? 0.15 : 0.10),
+    Elevation.surfaceAt(1),
+  );
 
   // ── Semantic aliases — the design-system vocabulary. One canonical name per
   //    role, resolved through [active] like everything else. New components
@@ -433,14 +428,14 @@ class Shadows {
     BoxShadow(color: Color(0x1F201A12), blurRadius: 32, offset: Offset(0, 16)),
   ];
   static const coral = [
-    BoxShadow(color: Color(0x40FF5A36), blurRadius: 28, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x40FF4F9A), blurRadius: 28, offset: Offset(0, 12)),
   ];
 
-  /// Matching soft-glow shadow for [AppColors.accent] (brand teal) surfaces —
+  /// Matching soft-glow shadow for [AppColors.accent] (brand cyan) surfaces —
   /// same treatment as [coral], just the brand hue so a teal chip/button
   /// doesn't cast a mismatched orange shadow.
   static const brand = [
-    BoxShadow(color: Color(0x4012879B), blurRadius: 28, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x404DEBFF), blurRadius: 28, offset: Offset(0, 12)),
   ];
 
   /// A medium sheet/finish-card shadow — stronger than [card], softer than
@@ -478,7 +473,7 @@ class Elevation {
   ];
   static const List<BoxShadow> _darkE3 = [
     BoxShadow(color: Color(0x73000000), blurRadius: 32, offset: Offset(0, 16)),
-    BoxShadow(color: Color(0x1AFF7A4D), blurRadius: 36, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x264DEBFF), blurRadius: 36, offset: Offset(0, 6)),
   ];
 
   /// Resolve a level for the current mode — dark drops the drop-shadow entirely.
@@ -504,7 +499,7 @@ class Elevation {
     final d = dark ?? AppColors.isDark;
     if (!d || level <= 0) return null;
     final c = level >= 3
-        ? const Color(0xFF3D362C) // brighter hairline on the lifted hero
+        ? const Color(0xFF3B4964) // brighter hairline on the lifted hero
         : AppColors.divider;
     return Border.all(color: c, width: 1);
   }

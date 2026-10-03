@@ -11,10 +11,9 @@
 //
 // Packs are mixed deliberately, picked per concept for the best semantic fit
 // ("best in its own zone"), not one pack for everything:
-//  - phosphor_flutter (Duotone weight) — the primary "hero" biometric/domain
-//    glyphs. It's the only pack here with a genuine two-layer duotone
-//    render, which is the closest replacement for the old illustrations at
-//    the 28-40px card/hero sizes those used to occupy.
+//  - Material Icons — biometric/domain glyphs and standard cross-platform
+//    symbols. Using Flutter's bundled IconData keeps the app compatible with
+//    newer Flutter SDKs without relying on custom IconData subclasses.
 //  - solar_icons (Bold weight) — literal sport glyphs (running/bicycling/
 //    walking/swimming) and sleep-stage variants (moonSleep/moonStars/bed);
 //    the strongest workout-icon coverage of the packs evaluated.
@@ -39,12 +38,6 @@ import 'package:flutter/material.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart' show FluentIcons;
 import 'package:hugeicons/hugeicons.dart' show HugeIcons;
 import 'package:iconsax_flutter/iconsax_flutter.dart' show Iconsax;
-import 'package:phosphor_flutter/phosphor_flutter.dart'
-    show
-        PhosphorIconsDuotone,
-        PhosphorIconsRegular,
-        PhosphorIcon,
-        PhosphorDuotoneIconData;
 import 'package:solar_icons/solar_icons.dart' show SolarIconsBold;
 
 import '../../theme/tokens.dart';
@@ -147,34 +140,34 @@ enum OsIcon {
 /// currency every pack here exports (phosphor's Duotone data subclasses
 /// `IconData`, so it fits the same map without a wrapper type).
 const Map<OsIcon, IconData> _glyphs = {
-  OsIcon.today: PhosphorIconsDuotone.house,
-  OsIcon.sleep: PhosphorIconsDuotone.moon,
-  OsIcon.heart: PhosphorIconsDuotone.heart,
+  OsIcon.today: Icons.home_rounded,
+  OsIcon.sleep: Icons.dark_mode_rounded,
+  OsIcon.heart: Icons.favorite_rounded,
   // Distinct from `heart` — a "straight line" heart glyph reads as the
   // measurement (rate) rather than the organ/domain.
-  OsIcon.heartRate: PhosphorIconsDuotone.heartStraight,
+  OsIcon.heartRate: Icons.monitor_heart_rounded,
   OsIcon.restingHeartRate: SolarIconsBold.heartPulse,
-  OsIcon.maxHeartRate: PhosphorIconsDuotone.heartbeat,
+  OsIcon.maxHeartRate: Icons.favorite_rounded,
   // No pack has a literal "HR zones" glyph — a gauge/dial is the closest
   // generic stand-in (approximation).
   OsIcon.heartRateZones: FluentIcons.gauge_24_regular,
   OsIcon.heartRateRecovery: SolarIconsBold.heartPulse2,
   // HRV as a waveform (distinct from a generic heart) — the best available
   // semantic match; no pack draws an actual beat-to-beat variability glyph.
-  OsIcon.hrv: PhosphorIconsDuotone.waveSine,
+  OsIcon.hrv: Icons.waves_rounded,
   // No pack has a "recovery ring" glyph — a gauge/dial approximates the
   // readiness-score-dial concept.
-  OsIcon.recovery: PhosphorIconsDuotone.gauge,
+  OsIcon.recovery: Icons.speed_rounded,
   // No pack has a literal "body strain" glyph — a barbell approximates
   // physical exertion/training load.
-  OsIcon.bodyStrain: PhosphorIconsDuotone.barbell,
+  OsIcon.bodyStrain: Icons.fitness_center_rounded,
   OsIcon.workouts: SolarIconsBold.runningRound,
-  OsIcon.steps: PhosphorIconsDuotone.footprints,
+  OsIcon.steps: Icons.directions_walk_rounded,
   OsIcon.distance: FluentIcons.ruler_24_regular,
   // No pack has a literal VO2max glyph — a speedometer approximates an
   // aerobic-capacity/output metric.
-  OsIcon.vo2max: PhosphorIconsDuotone.speedometer,
-  OsIcon.awake: PhosphorIconsDuotone.sunHorizon,
+  OsIcon.vo2max: Icons.speed_rounded,
+  OsIcon.awake: Icons.wb_sunny_rounded,
   OsIcon.bedtime: SolarIconsBold.bed,
   // Sleep-stage glyphs don't exist in any general-purpose pack; lightSleep/
   // deepSleep use two visually-distinct moon variants as an approximation
@@ -183,44 +176,44 @@ const Map<OsIcon, IconData> _glyphs = {
   OsIcon.deepSleep: SolarIconsBold.moonStars,
   // A stepped square wave reads as a hypnogram staircase — a good literal
   // fit, not just an approximation.
-  OsIcon.sleepHypnogram: PhosphorIconsDuotone.waveSquare,
+  OsIcon.sleepHypnogram: Icons.show_chart_rounded,
   // Literal ECG-monitor waveform — the one concept hugeicons was picked for.
   OsIcon.ecgRhythm: HugeIcons.strokeRoundedPulseRectangle01,
   // Stress: cognitive/nervous-system load reads better as "brain" than
   // another heart glyph (approximation, but a distinct one).
-  OsIcon.stress: PhosphorIconsDuotone.brain,
-  OsIcon.calm: PhosphorIconsDuotone.leaf,
-  OsIcon.calories: PhosphorIconsDuotone.flame,
-  OsIcon.intensity: PhosphorIconsDuotone.lightning,
+  OsIcon.stress: Icons.psychology_rounded,
+  OsIcon.calm: Icons.eco_rounded,
+  OsIcon.calories: Icons.local_fire_department_rounded,
+  OsIcon.intensity: Icons.bolt_rounded,
   OsIcon.elevation: FluentIcons.mountain_location_top_24_regular,
-  OsIcon.skinTemperature: PhosphorIconsDuotone.thermometer,
-  OsIcon.temperatureDeviation: PhosphorIconsDuotone.thermometerHot,
-  OsIcon.activity: PhosphorIconsDuotone.pulse,
-  OsIcon.ai: PhosphorIconsDuotone.sparkle,
+  OsIcon.skinTemperature: Icons.thermostat_rounded,
+  OsIcon.temperatureDeviation: Icons.device_thermostat_rounded,
+  OsIcon.activity: Icons.monitor_heart_rounded,
+  OsIcon.ai: Icons.auto_awesome_rounded,
   OsIcon.alarm: SolarIconsBold.alarm,
   OsIcon.edit: FluentIcons.edit_24_regular,
   OsIcon.notifications: FluentIcons.alert_24_regular,
   OsIcon.profile: FluentIcons.person_24_regular,
   // No pack has a "weekly recap" glyph — an open book approximates a
   // summary/read-back concept.
-  OsIcon.recap: PhosphorIconsDuotone.bookOpenText,
-  OsIcon.records: PhosphorIconsDuotone.trophy,
+  OsIcon.recap: Icons.menu_book_rounded,
+  OsIcon.records: Icons.emoji_events_rounded,
   OsIcon.streak: SolarIconsBold.medalRibbonStar,
   OsIcon.strength: SolarIconsBold.dumbbell,
   OsIcon.add: FluentIcons.add_24_regular,
   // Cardio: iconsax's canonical "activity" glyph is a heartbeat zigzag —
   // gives iconsax real, well-fitted use beyond battery/bluetooth/wear.
   OsIcon.cardio: Iconsax.activity,
-  OsIcon.yoga: PhosphorIconsDuotone.personSimpleTaiChi,
+  OsIcon.yoga: Icons.self_improvement_rounded,
   OsIcon.run: SolarIconsBold.running,
   OsIcon.cycling: SolarIconsBold.bicycling,
   OsIcon.walk: SolarIconsBold.walking,
   OsIcon.swim: SolarIconsBold.swimming,
   // No pack has a literal "HIIT" glyph — a lightning bolt approximates
   // explosive interval training.
-  OsIcon.hiit: PhosphorIconsDuotone.lightning,
+  OsIcon.hiit: Icons.bolt_rounded,
   OsIcon.workoutOther: FluentIcons.sport_24_regular,
-  OsIcon.hydration: PhosphorIconsDuotone.drop,
+  OsIcon.hydration: Icons.water_drop_rounded,
   // Literal blood-drop — the second concept hugeicons was picked for (see
   // the `menstrualFlow` doc comment on the enum).
   OsIcon.menstrualFlow: HugeIcons.strokeRoundedBlood,
@@ -232,8 +225,8 @@ const Map<OsIcon, IconData> _glyphs = {
   OsIcon.settings: FluentIcons.settings_24_regular,
   // Utility chrome → Fluent, per the pack policy in this file's header.
   OsIcon.share: FluentIcons.share_24_regular,
-  OsIcon.privacy: PhosphorIconsDuotone.shield,
-  OsIcon.sync: PhosphorIconsDuotone.arrowsClockwise,
+  OsIcon.privacy: Icons.security_rounded,
+  OsIcon.sync: Icons.sync_rounded,
   OsIcon.info: FluentIcons.info_24_regular,
   OsIcon.check: FluentIcons.checkmark_24_regular,
   OsIcon.cancel: FluentIcons.dismiss_24_regular,
@@ -243,16 +236,15 @@ const Map<OsIcon, IconData> _glyphs = {
   OsIcon.arrowLeft: FluentIcons.chevron_left_24_regular,
   OsIcon.up: FluentIcons.arrow_up_24_regular,
   OsIcon.down: FluentIcons.arrow_down_24_regular,
-  OsIcon.logout: PhosphorIconsDuotone.signOut,
-  OsIcon.server: PhosphorIconsDuotone.database,
-  OsIcon.shield: PhosphorIconsDuotone.shield,
+  OsIcon.logout: Icons.logout_rounded,
+  OsIcon.server: Icons.storage_rounded,
+  OsIcon.shield: Icons.verified_user_rounded,
   // Real brand marks, not duotone (a two-tone render would misrepresent a
-  // monochrome brand logo) — Phosphor's flat Regular weight, same "plain
-  // chrome" register Fluent already occupies elsewhere in this map.
-  OsIcon.github: PhosphorIconsRegular.githubLogo,
-  OsIcon.discord: PhosphorIconsRegular.discordLogo,
-  OsIcon.reddit: PhosphorIconsRegular.redditLogo,
-  OsIcon.xTwitter: PhosphorIconsRegular.xLogo,
+  // monochrome brand marks are represented by familiar, bundled symbols.
+  OsIcon.github: Icons.code_rounded,
+  OsIcon.discord: Icons.forum_rounded,
+  OsIcon.reddit: Icons.forum_outlined,
+  OsIcon.xTwitter: Icons.alternate_email_rounded,
 };
 
 /// Sensible per-domain default tint, used whenever a call site doesn't pass
@@ -328,15 +320,12 @@ Color _defaultTint(OsIcon icon) {
 const double _kGlyphScale = 0.72;
 
 /// Renders the resolved [IconData] for [icon] at [size]/[color], routing
-/// phosphor's duotone data through [PhosphorIcon] (the two-layer widget its
-/// package requires) and everything else through the plain [Icon] widget —
+/// The resolved bundled or icon-pack glyph through Flutter's [Icon] widget —
 /// callers never need to know which pack a glyph came from.
 Widget _renderGlyph(OsIcon icon, double size, Color color) {
   final data = _glyphs[icon]!;
   final glyphSize = size * _kGlyphScale;
-  final glyph = data is PhosphorDuotoneIconData
-      ? PhosphorIcon(data, size: glyphSize, color: color)
-      : Icon(data, size: glyphSize, color: color);
+  final glyph = Icon(data, size: glyphSize, color: color);
   // Fixed box at the ORIGINAL requested size so layout (Row/SizedBox/
   // alignment) around every existing call site is unaffected — only the
   // glyph inside shrinks.

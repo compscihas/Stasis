@@ -28,6 +28,7 @@
 
 // CupertinoPageTransitionsBuilder is exported by material.dart on the pinned
 // Flutter 3.41.6 toolchain. Keep the CI pin and this import contract aligned.
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'page_transitions.dart';
 import 'tokens.dart';

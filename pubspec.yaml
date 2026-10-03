@@ -123,7 +123,6 @@ dependencies:
   solar_icons: ^0.1.0
   iconsax_flutter: ^1.0.1
   fluentui_system_icons: ^1.1.273
-  phosphor_flutter: ^2.1.0
 
   # Declarative motion language for the design system (entrance stagger, press
   # pops, count-ups, shimmer) — one consistent vocabulary instead of hand-rolled

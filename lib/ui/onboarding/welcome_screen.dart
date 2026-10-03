@@ -61,8 +61,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       return;
     }
     if (!_client.configured) {
-      _set(() => _error =
-          'No backend configured. Set one in Profile → Backend URL, then retry.');
+      _set(
+        () => _error =
+            'No backend configured. Set one in Profile → Backend URL, then retry.',
+      );
       return;
     }
     _set(() {
@@ -74,7 +76,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       if (!exists) {
         _set(() {
           _busy = false;
-          _error = "No v2 account for that email. Continue as a new user instead.";
+          _error =
+              "No v2 account for that email. Continue as a new user instead.";
         });
         return;
       }
@@ -107,7 +110,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         _step = _Step.importing;
         _progress = 'Downloading your last 90 days…';
       });
-      final res = await CloudImporter.run(_client, days: CloudImporter.defaultDays);
+      final res = await CloudImporter.run(
+        _client,
+        days: CloudImporter.defaultDays,
+      );
       _set(() => _progress = 'Saving locally…');
       // Persist the cloud profile + mark onboarding done → the gate advances.
       await app.completeCloudOnboard(res.profile);
@@ -174,7 +180,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           title: 'Import from a file',
           body: 'A backup from this app, or an export from another one.',
           onTap: () => Navigator.of(context).push(
-              themedRoute((_) => const ImportScreen(), name: 'ImportScreen')),
+            themedRoute((_) => const ImportScreen(), name: 'ImportScreen'),
+          ),
         ),
         const SizedBox(height: Sp.x3),
         WelcomeOptionCard(
@@ -193,22 +200,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       padding: const EdgeInsets.fromLTRB(Sp.screen, Sp.x4, Sp.screen, Sp.x8),
       physics: const BouncingScrollPhysics(),
       children: [
-        Row(children: [
-          AppBackButton(
-            onBack: () => _set(() {
-              _step = _Step.choice;
-              _error = null;
-            }),
-          ),
-        ]),
+        Row(
+          children: [
+            AppBackButton(
+              onBack: () => _set(() {
+                _step = _Step.choice;
+                _error = null;
+              }),
+            ),
+          ],
+        ),
         const SizedBox(height: Sp.x6),
         Text('Your account email', style: AppText.h1),
         const SizedBox(height: Sp.x2),
-        Text('We’ll send a 6-digit code to confirm it’s you.',
-            style: AppText.bodySoft),
+        Text(
+          'We’ll send a 6-digit code to confirm it’s you.',
+          style: AppText.bodySoft,
+        ),
         const SizedBox(height: Sp.x6),
-        _input(_email, 'you@example.com', TextInputType.emailAddress,
-            autofocus: true),
+        _input(
+          _email,
+          'you@example.com',
+          TextInputType.emailAddress,
+          autofocus: true,
+        ),
         _errorText(),
         const SizedBox(height: Sp.x6),
         _primary('Send code', _busy ? null : _sendCode),
@@ -231,21 +246,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       padding: const EdgeInsets.fromLTRB(Sp.screen, Sp.x4, Sp.screen, Sp.x8),
       physics: const BouncingScrollPhysics(),
       children: [
-        Row(children: [
-          AppBackButton(
-            onBack: () => _set(() {
-              _step = _Step.email;
-              _error = null;
-            }),
-          ),
-        ]),
+        Row(
+          children: [
+            AppBackButton(
+              onBack: () => _set(() {
+                _step = _Step.email;
+                _error = null;
+              }),
+            ),
+          ],
+        ),
         const SizedBox(height: Sp.x6),
         Text('Enter your code', style: AppText.h1),
         const SizedBox(height: Sp.x2),
-        Text('Sent to ${_email.text.trim()}. It expires in 10 minutes.',
-            style: AppText.bodySoft),
+        Text(
+          'Sent to ${_email.text.trim()}. It expires in 10 minutes.',
+          style: AppText.bodySoft,
+        ),
         const SizedBox(height: Sp.x6),
-        _input(_code, '123456', TextInputType.number, autofocus: true, maxLen: 6),
+        _input(
+          _code,
+          '123456',
+          TextInputType.number,
+          autofocus: true,
+          maxLen: 6,
+        ),
         _errorText(),
         const SizedBox(height: Sp.x6),
         _primary('Verify & import', _busy ? null : _verifyAndImport),
@@ -267,14 +292,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 width: 28,
                 height: 28,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2.6, color: AppColors.accent),
+                  strokeWidth: 2.6,
+                  color: AppColors.accent,
+                ),
               ),
               const SizedBox(height: Sp.x5),
-              Text(_progress ?? 'Importing…',
-                  style: AppText.title, textAlign: TextAlign.center),
+              Text(
+                _progress ?? 'Importing…',
+                style: AppText.title,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: Sp.x2),
-              Text('This runs once — your data stays on this device.',
-                  textAlign: TextAlign.center, style: AppText.captionMuted),
+              Text(
+                'This runs once — your data stays on this device.',
+                textAlign: TextAlign.center,
+                style: AppText.captionMuted,
+              ),
             ],
           ),
         ).dsEnter(),
@@ -284,8 +317,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   // ── small building blocks ────────────────────────────────────────────────────
 
-  Widget _input(TextEditingController c, String hint, TextInputType kb,
-      {bool autofocus = false, int? maxLen}) {
+  Widget _input(
+    TextEditingController c,
+    String hint,
+    TextInputType kb, {
+    bool autofocus = false,
+    int? maxLen,
+  }) {
     return TextField(
       controller: c,
       keyboardType: kb,
@@ -302,32 +340,39 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           borderRadius: BorderRadius.circular(R.cardSm),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: Sp.x4, vertical: Sp.x4),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Sp.x4,
+          vertical: Sp.x4,
+        ),
       ),
     );
   }
 
   Widget _primary(String label, VoidCallback? onTap) => SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: onTap,
-          child: _busy
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child:
-                      CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Text(label),
-        ),
-      );
+    width: double.infinity,
+    child: FilledButton(
+      onPressed: onTap,
+      child: _busy
+          ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Text(label),
+    ),
+  );
 
   Widget _errorText() => _error == null
       ? const SizedBox.shrink()
       : Padding(
           padding: const EdgeInsets.only(top: Sp.x3, left: Sp.x1),
-          child: Text(_error!,
-              style: AppText.captionMuted.copyWith(color: AppColors.critical)),
+          child: Text(
+            _error!,
+            style: AppText.captionMuted.copyWith(color: AppColors.critical),
+          ),
         );
 }
 
@@ -343,36 +388,38 @@ class WelcomeHero extends StatelessWidget {
     return BentoTile(
       tone: BentoTone.ink,
       padding: const EdgeInsets.all(Sp.x6),
-      child: Builder(builder: (context) {
-        final tone = ToneScope.of(context);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                shape: BoxShape.circle,
-                boxShadow: AppColors.isDark ? const [] : Shadows.brand,
+      child: Builder(
+        builder: (context) {
+          final tone = ToneScope.of(context);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                  boxShadow: AppColors.isDark ? const [] : Shadows.brand,
+                ),
+                child: const Center(
+                  child: AppIcon(OsIcon.wear, size: 24, color: Colors.white),
+                ),
               ),
-              child: const Center(
-                child: AppIcon(OsIcon.wear, size: 24, color: Colors.white),
+              const SizedBox(height: Sp.x5),
+              Text(
+                'Welcome to\nStasis AI',
+                style: AppText.display.copyWith(color: tone.fg, height: 1.05),
               ),
-            ),
-            const SizedBox(height: Sp.x5),
-            Text(
-              'Welcome to\nStasis AI',
-              style: AppText.display.copyWith(color: tone.fg, height: 1.05),
-            ),
-            const SizedBox(height: Sp.x3),
-            Text(
-              'Your band, your data — computed entirely on this phone.',
-              style: AppText.bodySoft.copyWith(color: tone.fgMuted),
-            ),
-          ],
-        );
-      }),
+              const SizedBox(height: Sp.x3),
+              Text(
+                'Your band, your data — computed entirely on this phone.',
+                style: AppText.bodySoft.copyWith(color: tone.fgMuted),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -425,8 +472,11 @@ class WelcomeOptionCard extends StatelessWidget {
         subtitle: body,
         // ListRow shows the chevron itself when onTap is null and trailing is
         // null — force it here since the CARD owns the tap.
-        trailing:
-            AppIcon(OsIcon.arrowRight, size: 16, color: AppColors.onSurfaceFaint),
+        trailing: AppIcon(
+          OsIcon.arrowRight,
+          size: 16,
+          color: AppColors.onSurfaceFaint,
+        ),
       ),
     );
   }

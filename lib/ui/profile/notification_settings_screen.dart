@@ -13,7 +13,9 @@ import '../../notify/notification_center.dart';
 import '../../notify/notification_prefs.dart';
 import '../../notify/notification_service.dart';
 import '../../state/app_state.dart';
+import '../../theme/theme_switcher.dart';
 import '../design/design.dart';
+import '../journal/morning_checkin_screen.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -43,7 +45,13 @@ class _NotificationSettingsScreenState
     });
     // Surface the OS permission prompt up front so the toggles actually do
     // something once granted.
-    await NotificationService.instance.ensurePermission();
+    final granted = await NotificationService.instance.ensurePermission();
+    if (!mounted) return;
+    // Visiting this screen is the contextual moment in which we ask for OS
+    // notification access. Register the check-in even when no wearable is paired.
+    if (granted) {
+      await NotificationCenter.instance.scheduleMorningCheckin(p);
+    }
   }
 
   Future<void> _update(NotificationPrefs next,
@@ -85,6 +93,25 @@ class _NotificationSettingsScreenState
     await _update(start
         ? _p.copyWith(quietStartMin: mins)
         : _p.copyWith(quietEndMin: mins));
+  }
+
+  Future<void> _pickMorningCheckinTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: _p.morningCheckinHour,
+        minute: _p.morningCheckinMinute,
+      ),
+      helpText: 'Morning check-in time',
+    );
+    if (picked == null) return;
+    await _update(
+      _p.copyWith(
+        morningCheckinHour: picked.hour,
+        morningCheckinMinute: picked.minute,
+      ),
+      reschedule: true,
+    );
   }
 
   @override
@@ -137,6 +164,48 @@ class _NotificationSettingsScreenState
                 value: _p.remindersEnabled,
                 onChanged: (v) =>
                     _update(_p.copyWith(remindersEnabled: v), reschedule: true),
+              ),
+            ]),
+          ),
+          const SizedBox(height: Sp.x6),
+          const SectionHeader('Morning check-in'),
+          SurfaceCard(
+            child: Column(children: [
+              _toggle(
+                title: 'Ask how you feel',
+                subtitle:
+                    'A daily prompt with a quick mood choice and follow-up questions.',
+                value: _p.morningCheckinEnabled,
+                onChanged: (v) => _update(
+                  _p.copyWith(morningCheckinEnabled: v),
+                  reschedule: true,
+                ),
+              ),
+              if (_p.morningCheckinEnabled) ...[
+                const _HairLine(),
+                ListRow(
+                  title: 'Reminder time',
+                  value: _fmt(_p.morningCheckinHour * 60 +
+                      _p.morningCheckinMinute),
+                  divider: false,
+                  onTap: _pickMorningCheckinTime,
+                ),
+              ],
+              Padding(
+                padding: const EdgeInsets.only(top: Sp.x2),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      themedRoute(
+                        (_) => const MorningCheckinScreen(),
+                        name: 'MorningCheckinScreen',
+                      ),
+                    ),
+                    icon: const Icon(Icons.emoji_emotions_outlined),
+                    label: const Text('Check in now'),
+                  ),
+                ),
               ),
             ]),
           ),

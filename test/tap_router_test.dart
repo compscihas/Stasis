@@ -18,6 +18,19 @@ void main() {
     expect(t.screen, kRouteBreathing);
   });
 
+  test('morning check-in actions resolve to Today + the check-in screen', () {
+    for (final route in [
+      kRouteMorningCheckin,
+      kRouteMorningCheckinGood,
+      kRouteMorningCheckinOkay,
+      kRouteMorningCheckinLow,
+    ]) {
+      final target = resolveTapRoute(route);
+      expect(target.tab, 0);
+      expect(target.screen, route);
+    }
+  });
+
   test('other sub-screen routes still resolve correctly', () {
     expect(resolveTapRoute(kRouteAiMorning).screen, kRouteAiMorning);
     expect(resolveTapRoute(kRouteAiEvening).screen, kRouteAiEvening);

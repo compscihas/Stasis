@@ -10,6 +10,10 @@ const String kRouteAiMorning = '/ai/morning';
 const String kRouteAiEvening = '/ai/evening';
 const String kRouteJournalCompose = '/journal/compose';
 const String kRouteBreathing = '/breathing';
+const String kRouteMorningCheckin = '/morning-checkin';
+const String kRouteMorningCheckinGood = '/morning-checkin/good';
+const String kRouteMorningCheckinOkay = '/morning-checkin/okay';
+const String kRouteMorningCheckinLow = '/morning-checkin/low';
 
 /// "Did you work out?" auto-detect notification. Lands on the Workouts tab and
 /// pushes a focused review of the detected activity (log or adjust) — the plain
@@ -44,6 +48,10 @@ const Map<String, int> _screenRoutes = {
   kRouteAiEvening: 0,
   kRouteJournalCompose: 0,
   kRouteBreathing: 0,
+  kRouteMorningCheckin: 0,
+  kRouteMorningCheckinGood: 0,
+  kRouteMorningCheckinOkay: 0,
+  kRouteMorningCheckinLow: 0,
   kRouteWorkoutSuggestion: 4,
 };
 

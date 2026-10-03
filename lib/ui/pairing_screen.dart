@@ -70,7 +70,10 @@ class PairingInstructionContent extends StatelessWidget {
         ),
         const SizedBox(height: Sp.x5),
         SurfaceCard(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.x4, vertical: Sp.x2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.x4,
+            vertical: Sp.x2,
+          ),
           child: Column(
             children: const [
               ListRow(
@@ -350,52 +353,55 @@ class PairingStateView extends StatelessWidget {
         ),
         Expanded(
           child: Padding(
-            padding:
-                const EdgeInsets.fromLTRB(Sp.screen, Sp.x4, Sp.screen, Sp.x6),
+            padding: const EdgeInsets.fromLTRB(
+              Sp.screen,
+              Sp.x4,
+              Sp.screen,
+              Sp.x6,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  switch (phase) {
-                    PairPhase.notFound => 'No strap found.',
-                    PairPhase.askReady => 'Pair your\nstrap.',
-                    PairPhase.found => 'Strap found.',
-                    PairPhase.bluetoothOff => 'Bluetooth is off.',
-                    _ => 'Finding your\nstrap.',
-                  },
-                  style: AppText.display,
-                ),
+                Text(switch (phase) {
+                  PairPhase.notFound => 'No strap found.',
+                  PairPhase.askReady => 'Pair your\nstrap.',
+                  PairPhase.found => 'Strap found.',
+                  PairPhase.bluetoothOff => 'Bluetooth is off.',
+                  _ => 'Finding your\nstrap.',
+                }, style: AppText.display),
                 const SizedBox(height: Sp.x3),
-                Text(
-                  switch (phase) {
-                    PairPhase.scanning =>
-                      'Scanning for a nearby WHOOP in pairing mode…',
-                    PairPhase.found => 'Confirm it\'s yours, then pair.',
-                    PairPhase.notFound =>
-                      'Make sure it\'s awake and in pairing mode, then try again.',
-                    PairPhase.pairing => 'Pairing with your strap…',
-                    PairPhase.askReady =>
-                      'Tap Pair, then choose your WHOOP in the system sheet. '
-                          'This lets Stasis AI reconnect in the background.',
-                    PairPhase.bluetoothOff =>
-                      'Turn on Bluetooth in Settings or Control Center, then '
-                          'try again.',
-                  },
-                  style: AppText.bodySoft,
-                ),
+                Text(switch (phase) {
+                  PairPhase.scanning =>
+                    'Scanning for a nearby WHOOP in pairing mode…',
+                  PairPhase.found => 'Confirm it\'s yours, then pair.',
+                  PairPhase.notFound =>
+                    'Make sure it\'s awake and in pairing mode, then try again.',
+                  PairPhase.pairing => 'Pairing with your strap…',
+                  PairPhase.askReady =>
+                    'Tap Pair, then choose your WHOOP in the system sheet. '
+                        'This lets Stasis AI reconnect in the background.',
+                  PairPhase.bluetoothOff =>
+                    'Turn on Bluetooth in Settings or Control Center, then '
+                        'try again.',
+                }, style: AppText.bodySoft),
                 const Spacer(),
                 Center(child: _visual()),
                 const Spacer(),
                 if (error != null) ...[
-                  Row(children: [
-                    AppIcon(OsIcon.info, size: 18, color: AppColors.critical),
-                    const SizedBox(width: Sp.x2),
-                    Expanded(
-                      child: Text(error!,
-                          style: AppText.caption
-                              .copyWith(color: AppColors.critical)),
-                    ),
-                  ]),
+                  Row(
+                    children: [
+                      AppIcon(OsIcon.info, size: 18, color: AppColors.critical),
+                      const SizedBox(width: Sp.x2),
+                      Expanded(
+                        child: Text(
+                          error!,
+                          style: AppText.caption.copyWith(
+                            color: AppColors.critical,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: Sp.x4),
                 ],
                 _actions(),
@@ -418,7 +424,9 @@ class PairingStateView extends StatelessWidget {
             width: 132,
             height: 132,
             decoration: BoxDecoration(
-                color: AppColors.surfaceAlt, shape: BoxShape.circle),
+              color: AppColors.surfaceAlt,
+              shape: BoxShape.circle,
+            ),
             child: AppIcon(OsIcon.wear, size: 56, color: AppColors.inkMuted),
           ),
         );
@@ -429,9 +437,14 @@ class PairingStateView extends StatelessWidget {
             width: 132,
             height: 132,
             decoration: BoxDecoration(
-                color: AppColors.surfaceAlt, shape: BoxShape.circle),
-            child:
-                AppIcon(OsIcon.bluetooth, size: 56, color: AppColors.inkMuted),
+              color: AppColors.surfaceAlt,
+              shape: BoxShape.circle,
+            ),
+            child: AppIcon(
+              OsIcon.bluetooth,
+              size: 56,
+              color: AppColors.inkMuted,
+            ),
           ),
         );
       case PairPhase.scanning:
@@ -465,7 +478,9 @@ class PairingStateView extends StatelessWidget {
             height: 20,
             width: 20,
             child: CircularProgressIndicator(
-                strokeWidth: 2.2, color: Colors.white),
+              strokeWidth: 2.2,
+              color: Colors.white,
+            ),
           ),
         );
       case PairPhase.notFound:
@@ -492,31 +507,40 @@ class _FoundDeviceTile extends StatelessWidget {
     return BentoTile(
       tone: BentoTone.ink,
       padding: const EdgeInsets.symmetric(horizontal: Sp.x6, vertical: Sp.x6),
-      child: Builder(builder: (context) {
-        final tone = ToneScope.of(context);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(Sp.x4),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(R.cardSm),
+      child: Builder(
+        builder: (context) {
+          final tone = ToneScope.of(context);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(Sp.x4),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(R.cardSm),
+                ),
+                child: const AppIcon(
+                  OsIcon.wear,
+                  size: 30,
+                  color: Colors.white,
+                ),
               ),
-              child: const AppIcon(OsIcon.wear, size: 30, color: Colors.white),
-            ),
-            const SizedBox(height: Sp.x4),
-            Text(
-              name,
-              style: AppText.h1.copyWith(color: tone.fg),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: Sp.x3),
-            const StatusChip('Ready to pair',
-                icon: OsIcon.activity, tone: ChipTone.positive),
-          ],
-        );
-      }),
+              const SizedBox(height: Sp.x4),
+              Text(
+                name,
+                style: AppText.h1.copyWith(color: tone.fg),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Sp.x3),
+              const StatusChip(
+                'Ready to pair',
+                icon: OsIcon.activity,
+                tone: ChipTone.positive,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -531,9 +555,10 @@ class _PulseRings extends StatefulWidget {
 
 class _PulseRingsState extends State<_PulseRings>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 2))
-        ..repeat();
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  )..repeat();
   @override
   void dispose() {
     _c.dispose();
@@ -562,8 +587,11 @@ class _PulseRingsState extends State<_PulseRings>
                     shape: BoxShape.circle,
                     boxShadow: AppColors.isDark ? const [] : Shadows.brand,
                   ),
-                  child:
-                      const AppIcon(OsIcon.bluetooth, size: 40, color: Colors.white),
+                  child: const AppIcon(
+                    OsIcon.bluetooth,
+                    size: 40,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),

@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import '../../ai/briefing.dart';
 import '../../ai/briefing_engine.dart' show readinessBand;
+import '../../demo/preview_data.dart';
 import '../../models/metric.dart';
 import '../../models/payloads.dart';
 import '../../data/day_label.dart';
@@ -99,9 +100,16 @@ class _TodayScreenState extends State<TodayScreen>
   /// Show the once-a-morning recovery story: only with a real, settled readiness
   /// score for today, and only if it hasn't already been shown for today's date.
   bool _showStory(TodayData t) {
-    if (_storyDismissed || t.settledReadinessScore == null) return false;
+    if (_showingPreviewData ||
+        _storyDismissed ||
+        t.settledReadinessScore == null) {
+      return false;
+    }
     return Prefs.getString('ui.recovery_story_date', '') != _todayStr();
   }
+
+  bool get _showingPreviewData =>
+      data is Map && (data as Map)['preview_data'] == true;
 
   void _dismissStory() {
     Prefs.setString('ui.recovery_story_date', _todayStr());
@@ -113,9 +121,14 @@ class _TodayScreenState extends State<TodayScreen>
 
   @override
   Future<Object?> fetch(LocalRepository repo) async {
-    final today = await repo.getToday();
+    final savedToday = await repo.getToday();
+    final today = TodayData.fromJson(savedToday).isEmpty
+        ? <String, dynamic>{...previewTodayData}
+        : savedToday;
     // Push a fresh snapshot to the home/lock-screen widget (best-effort).
-    WidgetService.push(TodayData.fromJson(today));
+    if (today['preview_data'] != true) {
+      WidgetService.push(TodayData.fromJson(today));
+    }
     // HR chart + sparklines + last-night stages are all best-effort — never
     // fail the screen.
     try {
@@ -316,10 +329,17 @@ class _TodayScreenState extends State<TodayScreen>
         ),
         const SizedBox(height: Sp.x3),
       ],
+      if (_showingPreviewData) ...[
+        KeyedSubtree(
+          key: const ValueKey('today-preview-data'),
+          child: _previewDataNote(),
+        ),
+        const SizedBox(height: Sp.x3),
+      ],
       // Data-freshness note — only when the band data is genuinely stale or a
       // metrics pass is mid-flight (settling states also get the compact chip
       // inside TodayVitals).
-      if (_shouldShowTodayStatus(app, status)) ...[
+      if (!_showingPreviewData && _shouldShowTodayStatus(app, status)) ...[
         KeyedSubtree(
           key: const ValueKey('today-freshness'),
           child: _todayStatusCard(app, status),
@@ -387,6 +407,27 @@ class _TodayScreenState extends State<TodayScreen>
         ),
     ];
   }
+
+  Widget _previewDataNote() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: Sp.x3, vertical: Sp.x2),
+    decoration: BoxDecoration(
+      color: AppColors.tonalFill(AppColors.accent),
+      borderRadius: BorderRadius.circular(R.cardSm),
+      border: Border.all(color: AppColors.accent.withValues(alpha: 0.55)),
+    ),
+    child: Row(
+      children: [
+        OsAppIcon(OsIcon.info, size: 18, color: AppColors.accent),
+        const SizedBox(width: Sp.x2),
+        Expanded(
+          child: Text(
+            'SAMPLE DATA · PREVIEW ONLY — connect a wearable to replace these fictional values.',
+            style: AppText.caption.copyWith(color: AppColors.inkSoft),
+          ),
+        ),
+      ],
+    ),
+  );
 
   void _open(String id) {
     switch (id) {

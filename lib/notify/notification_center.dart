@@ -19,6 +19,7 @@ import 'fired_keys.dart';
 import 'notification_event.dart';
 import 'notification_prefs.dart';
 import 'notification_service.dart';
+import 'tap_router.dart';
 
 class NotificationCenter {
   NotificationCenter._();
@@ -158,6 +159,24 @@ class NotificationCenter {
   static const int recapHour = 18; // Sunday 18:00
   static const int recapMinute = 0;
 
+  /// Register the daily wellbeing prompt separately so it also works before a
+  /// wearable is paired and isn't tied to the general reminders master switch.
+  Future<void> scheduleMorningCheckin(NotificationPrefs prefs) async {
+    final svc = NotificationService.instance;
+    await svc.cancel(NotificationService.idMorningCheckin);
+    if (!prefs.morningCheckinEnabled) return;
+    await svc.scheduleDaily(
+      id: NotificationService.idMorningCheckin,
+      category: NotifCategory.reminders,
+      title: 'How are you feeling today?',
+      body: 'Choose 😊 Good, 😐 Okay, or ☹️ Not great to check in.',
+      hour: prefs.morningCheckinHour.clamp(0, 23),
+      minute: prefs.morningCheckinMinute.clamp(0, 59),
+      route: kRouteMorningCheckin,
+      categoryIdentifier: 'MORNING_CHECKIN',
+    );
+  }
+
   /// (Re)register the recurring wall-clock nudges as real OS-scheduled
   /// notifications, so they fire even when the app is closed. Idempotent: cancels
   /// then re-schedules per the current prefs. Call after pairing and whenever the
@@ -167,6 +186,7 @@ class NotificationCenter {
     final svc = NotificationService.instance;
     await svc.cancel(NotificationService.idWindDown);
     await svc.cancel(NotificationService.idWeeklyRecap);
+    await scheduleMorningCheckin(prefs);
     // Always clear the hydration band first so a disabled/retuned reminder never
     // leaves stale OS-scheduled slots behind.
     for (var i = 0; i < NotificationService.maxWaterSlots; i++) {

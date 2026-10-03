@@ -35,6 +35,11 @@ class NotificationPrefs {
   /// [waterIntervalMinAllowed]..[waterIntervalMaxAllowed] when scheduling.
   final int waterIntervalMin;
 
+  /// The daily local-time wellbeing check-in reminder.
+  final bool morningCheckinEnabled;
+  final int morningCheckinHour;
+  final int morningCheckinMinute;
+
   /// Allowed bounds for the hydration interval (30 min .. 6 h).
   static const int waterIntervalMinAllowed = 30;
   static const int waterIntervalMaxAllowed = 360;
@@ -49,6 +54,9 @@ class NotificationPrefs {
     this.criticalOverridesQuiet = true,
     this.waterEnabled = false,
     this.waterIntervalMin = 120, // every 2 hours
+    this.morningCheckinEnabled = true,
+    this.morningCheckinHour = 8,
+    this.morningCheckinMinute = 0,
   });
 
   static const _kHealth = 'notif_health';
@@ -60,6 +68,9 @@ class NotificationPrefs {
   static const _kCriticalOverride = 'notif_critical_override';
   static const _kWater = 'notif_water';
   static const _kWaterInterval = 'notif_water_interval';
+  static const _kMorningCheckin = 'notif_morning_checkin';
+  static const _kMorningCheckinHour = 'notif_morning_checkin_hour';
+  static const _kMorningCheckinMinute = 'notif_morning_checkin_minute';
 
   static Future<NotificationPrefs> load() async {
     final p = await SharedPreferences.getInstance();
@@ -73,6 +84,9 @@ class NotificationPrefs {
       criticalOverridesQuiet: p.getBool(_kCriticalOverride) ?? true,
       waterEnabled: p.getBool(_kWater) ?? false,
       waterIntervalMin: p.getInt(_kWaterInterval) ?? 120,
+      morningCheckinEnabled: p.getBool(_kMorningCheckin) ?? true,
+      morningCheckinHour: p.getInt(_kMorningCheckinHour) ?? 8,
+      morningCheckinMinute: p.getInt(_kMorningCheckinMinute) ?? 0,
     );
   }
 
@@ -87,6 +101,9 @@ class NotificationPrefs {
     await p.setBool(_kCriticalOverride, criticalOverridesQuiet);
     await p.setBool(_kWater, waterEnabled);
     await p.setInt(_kWaterInterval, waterIntervalMin);
+    await p.setBool(_kMorningCheckin, morningCheckinEnabled);
+    await p.setInt(_kMorningCheckinHour, morningCheckinHour);
+    await p.setInt(_kMorningCheckinMinute, morningCheckinMinute);
   }
 
   NotificationPrefs copyWith({
@@ -99,6 +116,9 @@ class NotificationPrefs {
     bool? criticalOverridesQuiet,
     bool? waterEnabled,
     int? waterIntervalMin,
+    bool? morningCheckinEnabled,
+    int? morningCheckinHour,
+    int? morningCheckinMinute,
   }) =>
       NotificationPrefs(
         healthEnabled: healthEnabled ?? this.healthEnabled,
@@ -111,6 +131,9 @@ class NotificationPrefs {
             criticalOverridesQuiet ?? this.criticalOverridesQuiet,
         waterEnabled: waterEnabled ?? this.waterEnabled,
         waterIntervalMin: waterIntervalMin ?? this.waterIntervalMin,
+        morningCheckinEnabled: morningCheckinEnabled ?? this.morningCheckinEnabled,
+        morningCheckinHour: morningCheckinHour ?? this.morningCheckinHour,
+        morningCheckinMinute: morningCheckinMinute ?? this.morningCheckinMinute,
       );
 
   bool categoryEnabled(NotifCategory c) => switch (c) {
