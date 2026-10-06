@@ -3,8 +3,7 @@
 
 Why self-hosted rather than star-history.com or starchart.cc:
 
-  * star-history.com refuses these repos outright — it answers
-    "GitHub restricted starred-data access for openstrap/edge".
+  * star-history.com has refused the upstream repo's starred-data access.
   * starchart.cc rate-limits anonymous callers, so the image intermittently
     renders as a broken graphic.
   * Both would make every visitor's browser call a third party. GitHub proxies
@@ -25,20 +24,20 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-# Which repos to plot. Defaults to edge alone, and that default is load-bearing:
-# a workflow's built-in GITHUB_TOKEN is scoped to its OWN repository, so reading
-# OpenStrap/protocol from a job running in OpenStrap/edge returns
-# 403 "Resource not accessible by integration". Charting siblings needs a PAT
-# with read access to them, so it's opt-in rather than a default that fails:
+# Which repos to plot. The workflow token is scoped to the repository running
+# the workflow. Default to that repository so forks can refresh their own chart
+# without trying to read an upstream repo with an inaccessible installation
+# token. Charting siblings needs a token with read access to them:
 #
-#   STAR_HISTORY_REPOS="OpenStrap/edge,OpenStrap/protocol" python3 tool/gen_star_history.py
+#   STAR_HISTORY_REPOS="owner/repo,owner/sibling" python3 tool/gen_star_history.py
 #
 # Keep whatever CI uses identical to what you run locally. If the repo set
 # differs between the two, the committed SVG flip-flops and the workflow commits
 # a revision every week — the churn the fail-closed/no-change guards exist to
 # prevent.
 REPOS = [r.strip() for r in
-         os.environ.get("STAR_HISTORY_REPOS", "OpenStrap/edge").split(",")
+         os.environ.get("STAR_HISTORY_REPOS",
+                        os.environ.get("GITHUB_REPOSITORY", "compscihas/Stasis")).split(",")
          if r.strip()]
 OUT = "docs/star-history.svg"
 
