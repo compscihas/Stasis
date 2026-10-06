@@ -13,8 +13,18 @@ jobs:
       issues: write
       pull-requests: write
       contents: write
+    env:
+      PR_AGENT_API_KEY: ${{ secrets.PR_AGENT_API_KEY }}
+      PR_AGENT_API_BASE: ${{ secrets.PR_AGENT_API_BASE }}
     steps:
+      - name: Report missing PR Agent configuration
+        if: env.PR_AGENT_API_KEY == '' || env.PR_AGENT_API_BASE == ''
+        run: |
+          echo "::notice::PR Agent skipped: configure PR_AGENT_API_KEY and PR_AGENT_API_BASE repository secrets to enable reviews."
+          echo "PR Agent skipped because its gateway credentials are not configured. Flutter analysis and tests run separately." >> "$GITHUB_STEP_SUMMARY"
+
       - name: PR Agent action step
+        if: env.PR_AGENT_API_KEY != '' && env.PR_AGENT_API_BASE != ''
         uses: the-pr-agent/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -22,8 +32,8 @@ jobs:
           # reviewable and version-controlled - env vars sit at the TOP of the
           # precedence stack (_reapply_env_overrides in git_providers/utils.py),
           # so re-adding CONFIG.MODEL here would silently override the file.
-          OPENAI_KEY: ${{ secrets.PR_AGENT_API_KEY }}
+          OPENAI_KEY: ${{ env.PR_AGENT_API_KEY }}
           # Double underscore: this maps to the OPENAI.API_BASE setting that
           # litellm_ai_handler.py reads. The single-underscore OPENAI_API_BASE
           # is read by nothing, so the gateway URL was silently dropped.
-          OPENAI__API_BASE: ${{ secrets.PR_AGENT_API_BASE }}
+          OPENAI__API_BASE: ${{ env.PR_AGENT_API_BASE }}
