@@ -116,8 +116,8 @@ void main() {
       final sink = _FakeSink();
       center.presentSink = sink.call;
 
-      await center.emit(_ev('$today:irregular', date: '$today'));
-      await center.emit(_ev('$tomorrow:irregular', date: '$tomorrow'));
+      await center.emit(_ev('$today:irregular', date: today));
+      await center.emit(_ev('$tomorrow:irregular', date: tomorrow));
 
       expect(sink.shown.length, 2);
       expect(
@@ -256,7 +256,7 @@ void main() {
           category: NotifCategory.health,
           title: 'High Stress Detected',
           body: 'Your stress score is 82. Consider taking a moment to breathe.',
-          date: '$today',
+          date: today,
         );
 
     test('dedupes on repeat (was previously re-alerting per screen visit)',
