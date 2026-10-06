@@ -67,7 +67,7 @@ NotificationEvent _ev(
   String dedupeKey, {
   NotifCategory category = NotifCategory.health,
   NotifPriority priority = NotifPriority.critical,
-  String date = '2026-07-23',
+  String? date,
 }) =>
     NotificationEvent(
       dedupeKey: dedupeKey,
@@ -75,12 +75,15 @@ NotificationEvent _ev(
       priority: priority,
       title: 't',
       body: 'b',
-      date: date,
+      date: date ?? dayLabelOf(DateTime.now()),
     );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  final today = dayLabelOf(DateTime.now());
+  final now = DateTime.now();
+  final tomorrow = dayLabelOf(DateTime(now.year, now.month, now.day + 1));
   final center = NotificationCenter.instance;
   late Future<bool> Function(NotificationEvent, {bool allowPermissionPrompt})
       original;
@@ -101,7 +104,7 @@ void main() {
       final sink = _FakeSink();
       center.presentSink = sink.call;
 
-      final e = _ev('2026-07-23:irregular');
+      final e = _ev('$today:irregular');
       await center.emit(e);
       await center.emit(e); // re-derive would re-emit the same key
       await center.emit(e);
@@ -113,13 +116,13 @@ void main() {
       final sink = _FakeSink();
       center.presentSink = sink.call;
 
-      await center.emit(_ev('2026-07-23:irregular', date: '2026-07-23'));
-      await center.emit(_ev('2026-07-24:irregular', date: '2026-07-24'));
+      await center.emit(_ev('$today:irregular', date: '$today'));
+      await center.emit(_ev('$tomorrow:irregular', date: '$tomorrow'));
 
       expect(sink.shown.length, 2);
       expect(
         sink.shown.map((e) => e.dedupeKey),
-        containsAll(['2026-07-23:irregular', '2026-07-24:irregular']),
+        containsAll(['$today:irregular', '$tomorrow:irregular']),
       );
     });
 
@@ -128,14 +131,14 @@ void main() {
       // the same on-disk store that survives an app restart on-device.
       final sink1 = _FakeSink();
       center.presentSink = sink1.call;
-      await center.emit(_ev('2026-07-23:illness'));
+      await center.emit(_ev('$today:illness'));
       expect(sink1.shown.length, 1);
 
       // Second "session": same persisted store — the key is still remembered,
       // so it must NOT fire again.
       final sink2 = _FakeSink();
       center.presentSink = sink2.call;
-      await center.emit(_ev('2026-07-23:illness'));
+      await center.emit(_ev('$today:illness'));
       expect(sink2.shown, isEmpty);
     });
 
@@ -144,11 +147,11 @@ void main() {
       // still lets it fire.
       final denied = _FakeSink(grant: false);
       center.presentSink = denied.call;
-      await center.emit(_ev('2026-07-23:temp'));
+      await center.emit(_ev('$today:temp'));
 
       final granted = _FakeSink();
       center.presentSink = granted.call;
-      await center.emit(_ev('2026-07-23:temp'));
+      await center.emit(_ev('$today:temp'));
       expect(granted.shown.length, 1);
     });
   });
@@ -159,12 +162,12 @@ void main() {
       final sink = _FakeSink();
       center.presentSink = sink.call;
 
-      await center.emit(_ev('2026-07-23:illness', category: NotifCategory.health));
+      await center.emit(_ev('$today:illness', category: NotifCategory.health));
       expect(sink.shown, isEmpty);
 
       // Re-enabling the category later must let the key fire — the gate, not the
       // dedupe guard, suppressed it, so no key should have been recorded.
-      expect(await const FiredKeyStore().hasFired('2026-07-23:illness'), isFalse);
+      expect(await const FiredKeyStore().hasFired('$today:illness'), isFalse);
     });
 
     test('quiet hours suppress a non-critical event', () async {
@@ -178,7 +181,7 @@ void main() {
       center.presentSink = sink.call;
 
       await center.emit(_ev(
-        '2026-07-23:recovery',
+        '$today:recovery',
         category: NotifCategory.recovery,
         priority: NotifPriority.normal,
       ));
@@ -195,7 +198,7 @@ void main() {
       final sink = _FakeSink();
       center.presentSink = sink.call;
 
-      final e = _ev('2026-07-23:illness', priority: NotifPriority.critical);
+      final e = _ev('$today:illness', priority: NotifPriority.critical);
       await center.emit(e);
       await center.emit(e);
       expect(sink.shown.length, 1);
@@ -208,7 +211,7 @@ void main() {
       final sink = _GatedSink();
       center.presentSink = sink.call;
 
-      final e = _ev('2026-07-23:irregular');
+      final e = _ev('$today:irregular');
       final f1 = center.emit(e);
       final f2 = center.emit(e);
       // Order on the sink's entry signal, not a timer: once the first emit is
@@ -228,8 +231,8 @@ void main() {
       final sink = _GatedSink();
       center.presentSink = sink.call;
 
-      final f1 = center.emit(_ev('2026-07-23:a'));
-      final f2 = center.emit(_ev('2026-07-23:b'));
+      final f1 = center.emit(_ev('$today:a'));
+      final f2 = center.emit(_ev('$today:b'));
       // First emit is parked inside present; the second is held on the lock, so
       // its record-key write can only run after the first's — no interleaving.
       await sink.entered;
@@ -239,8 +242,8 @@ void main() {
       expect(sink.calls, 2);
       // Independent per-key flags: neither key clobbered the other.
       const store = FiredKeyStore();
-      expect(await store.hasFired('2026-07-23:a'), isTrue);
-      expect(await store.hasFired('2026-07-23:b'), isTrue);
+      expect(await store.hasFired('$today:a'), isTrue);
+      expect(await store.hasFired('$today:b'), isTrue);
     });
   });
 
@@ -249,11 +252,11 @@ void main() {
     // (normal) priority, no route. It used to call presentEvent directly,
     // bypassing both the gate and the dedupe guard — now it goes through emit.
     NotificationEvent highStress() => NotificationEvent(
-          dedupeKey: '2026-07-23:high_stress',
+          dedupeKey: '$today:high_stress',
           category: NotifCategory.health,
           title: 'High Stress Detected',
           body: 'Your stress score is 82. Consider taking a moment to breathe.',
-          date: '2026-07-23',
+          date: '$today',
         );
 
     test('dedupes on repeat (was previously re-alerting per screen visit)',
