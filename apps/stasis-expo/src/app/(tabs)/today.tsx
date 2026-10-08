@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FeelingChoices } from '@/components/feeling-choices';
 import { Screen } from '@/components/screen';
 import { MetricCard, MetricRow, PreviewBadge, ReadinessRing, ScreenTitle, SectionTitle, TactilePressable, Tile } from '@/components/ui';
-import { currentHeartRate, previewSnapshot } from '@/data/preview-data';
+import { currentHeartRate, heartRate24Hour, hrvTrend, previewSnapshot, previewStepsTrend, previewStressTrend } from '@/data/preview-data';
 import { localDayId, type SymptomCheckin } from '@/data/symptom-model';
 import { getSymptomCheckin } from '@/data/symptom-repository';
 import { colors, radius, spacing } from '@/design/tokens';
@@ -46,11 +46,11 @@ export default function TodayScreen() {
       </Tile>
 
       <View>
-        <SectionTitle>Today's vitals</SectionTitle>
-        <MetricRow accent={colors.coral} icon="heart" label="Current heart rate" value={String(currentHeartRate ?? '\u2014')} unit="bpm" />
-        <MetricRow accent={colors.cyan} icon="pulse" label="HRV" value={String(snapshot.hrv ?? '\u2014')} unit="ms" />
-        <MetricRow accent={colors.mint} icon="footsteps" label="Steps" value={snapshot.steps?.toLocaleString() ?? '\u2014'} />
-        <MetricRow accent={colors.amber} icon="flash-outline" label="Stress" value={String(snapshot.stress ?? '\u2014')} unit="/100" />
+        <SectionTitle action={<Text style={styles.meta}>Preview trends</Text>}>Today's vitals</SectionTitle>
+        <MetricRow accent={colors.coral} icon="heart" label="Current heart rate" value={String(currentHeartRate ?? '\u2014')} unit="bpm" trend={{ values: heartRate24Hour, period: 'last 24 hours' }} />
+        <MetricRow accent={colors.cyan} icon="pulse" label="HRV" value={String(snapshot.hrv ?? '\u2014')} unit="ms" trend={{ values: hrvTrend, period: 'last 7 days' }} />
+        <MetricRow accent={colors.mint} icon="footsteps" label="Steps" value={snapshot.steps?.toLocaleString() ?? '\u2014'} trend={{ values: previewStepsTrend, period: 'last 7 days', kind: 'bars' }} />
+        <MetricRow accent={colors.amber} icon="flash-outline" label="Stress" value={String(snapshot.stress ?? '\u2014')} unit="/100" trend={{ values: previewStressTrend, period: 'today' }} />
       </View>
 
       <View style={styles.summary}>

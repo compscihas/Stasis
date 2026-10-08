@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type ColorValue, type Pres
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { colors, radius, spacing, typeface, typography } from '@/design/tokens';
+import { Sparkline } from '@/components/sparkline';
 
 const SpringPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -86,12 +87,13 @@ export function MetricCard({ label, value, unit, accent = colors.blue, icon }: {
   );
 }
 
-export function MetricRow({ label, value, unit, icon, accent = colors.blue }: { label: string; value: string; unit?: string; icon: keyof typeof Ionicons.glyphMap; accent?: ColorValue }) {
+export function MetricRow({ label, value, unit, icon, accent = colors.blue, trend }: { label: string; value: string; unit?: string; icon: keyof typeof Ionicons.glyphMap; accent?: ColorValue; trend?: { values: readonly number[]; period: string; kind?: 'line' | 'bars' } }) {
   return (
     <View style={styles.metricRow}>
       <Ionicons color={accent} name={icon} size={22} />
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}{unit ? <Text style={styles.metricUnit}> {unit}</Text> : null}</Text>
+      {trend ? <Sparkline values={trend.values} color={accent} kind={trend.kind} label={`${label} preview trend: ${trend.period}`} /> : null}
     </View>
   );
 }
@@ -141,9 +143,9 @@ const styles = StyleSheet.create({
   metricValueRow: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
   metricValue: { color: colors.text, fontSize: 24, fontWeight: '600', letterSpacing: 0, ...typeface },
   metricUnit: { color: colors.textMuted, fontSize: 13, fontWeight: '400', marginLeft: 4, ...typeface },
-  metricRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, minHeight: 56, paddingVertical: 12 },
-  rowLabel: { color: colors.textMuted, flex: 1, fontSize: 14, ...typeface },
-  rowValue: { color: colors.text, fontSize: 18, fontWeight: '600', ...typeface },
+  metricRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 10, minHeight: 56, paddingVertical: 12 },
+  rowLabel: { color: colors.textMuted, flex: 1, minWidth: 0, fontSize: 13, ...typeface },
+  rowValue: { color: colors.text, flexShrink: 0, fontSize: 16, fontWeight: '600', ...typeface },
   ringWrap: { alignItems: 'center', justifyContent: 'center' },
   ringValue: { color: colors.text, fontSize: 40, fontWeight: '700', ...typeface },
   compactRingValue: { fontSize: 25 },

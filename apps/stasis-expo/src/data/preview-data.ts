@@ -33,6 +33,10 @@ export const previewWorkouts: WorkoutSummary[] = [
 export const hrvTrend = [74, 78, 72, 81, 79, 85, 82];
 export const restingHeartRateTrend = [63, 61, 62, 60, 59, 60, 60];
 
+// Illustrative preview series only; never passed to persistence or analytics.
+export const previewStepsTrend = [5230, 8105, 6420, 9020, 7104, 6100, 7482];
+export const previewStressTrend = [18, 24, 20, 17, 26, 29, 22, 19, 25, 23, 20, 22];
+
 // One preview sample per hour, from midnight through the current midnight boundary.
 export const heartRate24Hour = [
   62, 59, 57, 55, 54, 56, 61, 72, 84, 78, 69, 65, 63,

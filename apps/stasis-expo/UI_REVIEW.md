@@ -5,6 +5,11 @@ check-in, metric rows, flat surfaces, and a fixed tab bar. The same typography,
 spacing, surface treatment, and adaptive colors apply to Today, Sleep, Heart,
 Workouts, Profile, Illness Watch, Coach, and Coach server settings.
 
+Today's vitals include right-aligned sparklines: 24-hour heart rate, 7-day HRV,
+7-day steps (bars), and today's stress. All series are preview fixtures;
+"Preview trends" labels them visibly, and each chart has an accessible metric
+and period label. Steps and stress series are illustrative and never persisted.
+
 Today offers Normal, Feeling off, and Sick. Selecting one opens the editable
 check-in form with that choice selected. Nothing is persisted until Save;
 symptomatic reports still require severity. Existing reports remain editable.
