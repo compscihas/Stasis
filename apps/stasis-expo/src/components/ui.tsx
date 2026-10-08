@@ -78,11 +78,12 @@ export function GlassButton({ children, icon, onPress, disabled, primary = false
   );
 }
 
-export function MetricCard({ label, value, unit, accent = colors.blue, icon }: { label: string; value: string; unit?: string; accent?: ColorValue; icon?: keyof typeof Ionicons.glyphMap }) {
+export function MetricCard({ label, value, unit, accent = colors.blue, icon, trend }: { label: string; value: string; unit?: string; accent?: ColorValue; icon?: keyof typeof Ionicons.glyphMap; trend?: { values: readonly number[]; period: string; kind?: 'line' | 'bars' } }) {
   return (
     <Tile style={styles.metricCard}>
       <View style={styles.metricHeader}>{icon ? <Ionicons color={accent} name={icon} size={18} /> : null}<Text style={styles.metricLabel}>{label}</Text></View>
       <View style={styles.metricValueRow}><Text style={styles.metricValue}>{value}</Text>{unit ? <Text style={styles.metricUnit}>{unit}</Text> : null}</View>
+      {trend ? <Sparkline expanded values={trend.values} color={accent} kind={trend.kind} label={`${label} preview trend: ${trend.period}`} /> : null}
     </Tile>
   );
 }

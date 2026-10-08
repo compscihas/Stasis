@@ -8,7 +8,9 @@ Workouts, Profile, Illness Watch, Coach, and Coach server settings.
 Today's vitals include right-aligned sparklines: 24-hour heart rate, 7-day HRV,
 7-day steps (bars), and today's stress. All series are preview fixtures;
 "Preview trends" labels them visibly, and each chart has an accessible metric
-and period label. Steps and stress series are illustrative and never persisted.
+and period label. Sleep and strain tiles also show seven-day preview bar charts
+beneath their values. Steps, stress, sleep, and strain series are illustrative
+and never persisted.
 
 Today offers Normal, Feeling off, and Sick. Selecting one opens the editable
 check-in form with that choice selected. Nothing is persisted until Save;
@@ -21,6 +23,10 @@ remains unavailable in this migration.
 | Today, Light | Today, Dark |
 | --- | --- |
 | ![Today in light mode](screenshots/daily-checkin/today-light-mobile.png) | ![Today in dark mode](screenshots/daily-checkin/today-dark-mobile.png) |
+
+| Sleep & Strain Summaries, Light | Sleep & Strain Summaries, Dark |
+| --- | --- |
+| ![Summary charts in light mode](screenshots/daily-checkin/today-summaries-light-mobile.png) | ![Summary charts in dark mode](screenshots/daily-checkin/today-summaries-dark-mobile.png) |
 
 | Sleep, Light | Heart, Dark |
 | --- | --- |

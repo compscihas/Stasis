@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FeelingChoices } from '@/components/feeling-choices';
 import { Screen } from '@/components/screen';
 import { MetricCard, MetricRow, PreviewBadge, ReadinessRing, ScreenTitle, SectionTitle, TactilePressable, Tile } from '@/components/ui';
-import { currentHeartRate, heartRate24Hour, hrvTrend, previewSnapshot, previewStepsTrend, previewStressTrend } from '@/data/preview-data';
+import { currentHeartRate, heartRate24Hour, hrvTrend, previewSleepMinutesTrend, previewSnapshot, previewStepsTrend, previewStrainTrend, previewStressTrend } from '@/data/preview-data';
 import { localDayId, type SymptomCheckin } from '@/data/symptom-model';
 import { getSymptomCheckin } from '@/data/symptom-repository';
 import { colors, radius, spacing } from '@/design/tokens';
@@ -54,10 +54,10 @@ export default function TodayScreen() {
       </View>
 
       <View style={styles.summary}>
-        <SectionTitle>Sleep & strain</SectionTitle>
+        <SectionTitle action={<Text style={styles.meta}>Preview trends</Text>}>Sleep & strain</SectionTitle>
         <View style={styles.row}>
-          <MetricCard accent={colors.purple} icon="moon" label="Sleep" value={snapshot.sleepMinutes == null ? '\u2014' : `${Math.floor(snapshot.sleepMinutes / 60)}h ${snapshot.sleepMinutes % 60}m`} />
-          <MetricCard accent={colors.coral} icon="fitness" label="Strain" value={String(snapshot.strain ?? '\u2014')} />
+          <MetricCard accent={colors.purple} icon="moon" label="Sleep" value={snapshot.sleepMinutes == null ? '\u2014' : `${Math.floor(snapshot.sleepMinutes / 60)}h ${snapshot.sleepMinutes % 60}m`} trend={{ values: previewSleepMinutesTrend, period: 'last 7 days', kind: 'bars' }} />
+          <MetricCard accent={colors.coral} icon="fitness" label="Strain" value={String(snapshot.strain ?? '\u2014')} trend={{ values: previewStrainTrend, period: 'last 7 days', kind: 'bars' }} />
         </View>
       </View>
 

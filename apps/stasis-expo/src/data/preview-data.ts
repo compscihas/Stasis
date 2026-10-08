@@ -36,6 +36,8 @@ export const restingHeartRateTrend = [63, 61, 62, 60, 59, 60, 60];
 // Illustrative preview series only; never passed to persistence or analytics.
 export const previewStepsTrend = [5230, 8105, 6420, 9020, 7104, 6100, 7482];
 export const previewStressTrend = [18, 24, 20, 17, 26, 29, 22, 19, 25, 23, 20, 22];
+export const previewSleepMinutesTrend = [408, 450, 389, 465, 426, 441, 432];
+export const previewStrainTrend = [7.2, 11.6, 8.1, 13.4, 10.2, 6.8, 9.4];
 
 // One preview sample per hour, from midnight through the current midnight boundary.
 export const heartRate24Hour = [
