@@ -1,9 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
+import { FeelingChoices } from '@/components/feeling-choices';
 import { Card, Eyebrow, GlassButton, IconButton, TactilePressable } from '@/components/ui';
 import { confounderOptions, localDayId, normalizeTemperature, onsetAtForChoice, summarizeCheckins, symptomOptions, type ConfounderId, type FeelingStatus, type IllnessSignal, type OnsetChoice, type SymptomCheckin, type SymptomId, type TestStatus } from '@/data/symptom-model';
 import { getSymptomCheckin, recentIllnessSignals, recentSymptomCheckins, saveSymptomCheckin } from '@/data/symptom-repository';
@@ -36,8 +36,11 @@ const statusLabels: Record<FeelingStatus, string> = {
 };
 
 export default function IllnessScreen() {
+  const { feeling } = useLocalSearchParams<{ feeling?: string }>();
+  const requestedFeeling = feeling === 'normal' || feeling === 'off' || feeling === 'sick' ? feeling : null;
+  const appliedFeeling = useRef<FeelingStatus | null>(null);
   const dayId = localDayId();
-  const [status, setStatus] = useState<FeelingStatus | null>(null);
+  const [status, setStatus] = useState<FeelingStatus | null>(requestedFeeling);
   const [symptoms, setSymptoms] = useState<SymptomId[]>([]);
   const [severity, setSeverity] = useState<1 | 2 | 3 | null>(null);
   const [onsetChoice, setOnsetChoice] = useState<OnsetChoice>('today');
@@ -50,12 +53,14 @@ export default function IllnessScreen() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([getSymptomCheckin(dayId), recentSymptomCheckins(30), recentIllnessSignals(30)])
+    return Promise.all([getSymptomCheckin(dayId), recentSymptomCheckins(30), recentIllnessSignals(30)])
       .then(([today, recent, signals]) => {
         setHistory(recent);
         setSignals(signals);
-        if (!today) return;
-        setStatus(today.status);
+        const initialChoice = appliedFeeling.current !== requestedFeeling ? requestedFeeling : null;
+        appliedFeeling.current = requestedFeeling;
+        if (!today) { if (initialChoice) setStatus(initialChoice); return; }
+        setStatus(initialChoice ?? today.status);
         setSymptoms(today.symptoms);
         setSeverity(today.severity);
         setOnsetChoice(today.onsetAt == null ? 'unsure' : localDayId(new Date(today.onsetAt)) === dayId ? 'today' : 'yesterday');
@@ -65,9 +70,9 @@ export default function IllnessScreen() {
         setNote(today.note);
       })
       .catch((error: unknown) => console.warn('[symptom-checkin] load failed', error));
-  }, [dayId]);
+  }, [dayId, requestedFeeling]);
 
-  useFocusEffect(load);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   function toggle<T>(value: T, values: T[], setValues: (next: T[]) => void) {
     setValues(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
@@ -118,11 +123,7 @@ export default function IllnessScreen() {
       <Card>
         <Eyebrow>TODAY · {dayId}</Eyebrow>
         <Text style={styles.question}>How are you feeling?</Text>
-        <View style={styles.statusStack}>
-          {(['normal', 'off', 'sick'] as const).map((value) => (
-            <Choice key={value} active={status === value} label={statusLabels[value]} onPress={() => setStatus(value)} />
-          ))}
-        </View>
+        <FeelingChoices value={status} onChange={setStatus} />
       </Card>
 
       {status && status !== 'normal' ? (
@@ -207,33 +208,19 @@ export default function IllnessScreen() {
   );
 }
 
-function Choice({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
-  return (
-    <TactilePressable onPress={onPress} style={[styles.choice, active && styles.choiceActive]}>
-      <Ionicons color={active ? colors.cyan : colors.textMuted} name={active ? 'radio-button-on' : 'radio-button-off'} size={20} />
-      <Text style={[styles.choiceText, active && styles.choiceTextActive]}>{label}</Text>
-    </TactilePressable>
-  );
-}
-
 function Chip({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
-  return <TactilePressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></TactilePressable>;
+  return <TactilePressable accessibilityRole="checkbox" accessibilityState={{ checked: active }} aria-checked={active} onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></TactilePressable>;
 }
 
 const styles = StyleSheet.create({
   header: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   title: { flex: 1 },
-  kicker: { color: colors.cyan, fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
-  heading: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.7, marginTop: 2 },
-  question: { color: colors.text, fontSize: 20, fontWeight: '800', marginTop: spacing.sm },
-  statusStack: { gap: spacing.sm, marginTop: spacing.md },
-  choice: { alignItems: 'center', backgroundColor: colors.surfaceRaised, borderColor: colors.border, borderRadius: radius.sm, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, padding: spacing.md },
-  choiceActive: { backgroundColor: colors.blueFill, borderColor: colors.blue },
-  choiceText: { color: colors.textMuted, fontSize: 15, fontWeight: '700' },
-  choiceTextActive: { color: colors.text },
+  kicker: { color: colors.cyan, fontSize: 10, fontWeight: '800', letterSpacing: 0 },
+  heading: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: 0, marginTop: 2 },
+  question: { color: colors.text, fontSize: 18, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   segmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  chip: { borderColor: colors.border, borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chip: { borderColor: colors.border, borderRadius: radius.sm, borderWidth: 1, minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipActive: { backgroundColor: colors.blueFill, borderColor: colors.blue },
   chipText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   chipTextActive: { color: colors.cyan },

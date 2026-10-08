@@ -10,7 +10,7 @@ import { bleCapability } from '@/native/ble-client';
 function SettingRow({ icon, color, title, subtitle, onPress, last = false }: { icon: keyof typeof Ionicons.glyphMap; color: ColorValue; title: string; subtitle: string; onPress?: () => void; last?: boolean }) {
   return (
     <TactilePressable disabled={!onPress} onPress={onPress} style={[styles.settingRow, last && styles.lastRow]}>
-      <View style={[styles.settingIcon, { backgroundColor: color }]}><Ionicons color="#FFFFFF" name={icon} size={18} /></View>
+      <View style={[styles.settingIcon, { backgroundColor: colors.controlFill }]}><Ionicons color={color} name={icon} size={18} /></View>
       <View style={styles.settingCopy}>
         <Text style={styles.settingTitle}>{title}</Text>
         <Text style={styles.settingSubtitle}>{subtitle}</Text>
@@ -34,7 +34,6 @@ export default function ProfileScreen() {
             <Text style={styles.connection}>{ble.available ? 'Development build ready' : 'Preview mode'}</Text>
           </View>
         </View>
-        <Ionicons color={colors.textFaint} name="chevron-forward" size={18} />
         {!ble.available ? <Text style={styles.deviceHint}>{ble.reason}</Text> : null}
       </Card>
 
@@ -59,18 +58,18 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  deviceCard: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, paddingVertical: spacing.lg },
+  deviceCard: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, paddingBottom: spacing.lg },
   deviceIcon: { alignItems: 'center', backgroundColor: colors.cyanFill, borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, height: 64, justifyContent: 'center', width: 64 },
   deviceCopy: { flex: 1 },
-  deviceName: { color: colors.text, fontSize: 20, fontWeight: '600', letterSpacing: -0.3 },
+  deviceName: { color: colors.text, fontSize: 20, fontWeight: '600', letterSpacing: 0 },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 7, marginTop: 6 },
   statusDot: { borderRadius: radius.pill, height: 7, width: 7 },
   connection: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
   deviceHint: { color: colors.textMuted, flexBasis: '100%', ...typography.caption, marginTop: spacing.xs },
-  settingsCard: { paddingHorizontal: spacing.md, paddingVertical: 0 },
+  settingsCard: { gap: 0 },
   settingRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, minHeight: 70, paddingVertical: 11 },
   lastRow: { borderBottomWidth: 0 },
-  settingIcon: { alignItems: 'center', borderCurve: 'continuous', borderRadius: 11, height: 34, justifyContent: 'center', width: 34 },
+  settingIcon: { alignItems: 'center', borderRadius: radius.md, height: 34, justifyContent: 'center', width: 34 },
   settingCopy: { flex: 1 },
   settingTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
   settingSubtitle: { color: colors.textMuted, fontSize: 11, marginTop: 3 },

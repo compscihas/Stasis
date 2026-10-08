@@ -2,15 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Card, Eyebrow, GlassButton, PreviewBadge, ScreenTitle, SectionTitle } from '@/components/ui';
+import { Card, Eyebrow, PreviewBadge, ScreenTitle, SectionTitle, Tile } from '@/components/ui';
 import { previewWorkouts } from '@/data/preview-data';
 import { colors, radius, spacing, typography } from '@/design/tokens';
 
 export default function WorkoutsScreen() {
   return (
     <Screen>
-      <ScreenTitle action={<GlassButton icon="play" primary>Start</GlassButton>}>Workouts</ScreenTitle>
-      <View style={styles.badgeRow}><PreviewBadge /></View>
+      <ScreenTitle action={<PreviewBadge />}>Workouts</ScreenTitle>
 
       <Card style={styles.weekCard}>
         <View>
@@ -29,27 +28,26 @@ export default function WorkoutsScreen() {
 
       <SectionTitle>Recent</SectionTitle>
       {previewWorkouts.map((workout) => (
-        <Card key={workout.id} style={styles.workoutCard}>
+        <Tile key={workout.id} style={styles.workoutCard}>
           <View style={styles.workoutHeader}>
             <View style={styles.workoutIcon}><Ionicons color={colors.cyan} name="walk" size={25} /></View>
             <View style={styles.workoutCopy}>
               <Text style={styles.workoutTitle}>{workout.type}</Text>
               <Text style={styles.workoutMeta}>Today at 7:32 AM</Text>
             </View>
-            <Ionicons color={colors.textFaint} name="chevron-forward" size={18} />
           </View>
           <View style={styles.stats}>
             <Stat label="Strain" value={`${workout.strain ?? '—'}`} />
             <Stat label="Calories" value={`${workout.calories ?? '—'}`} />
             <Stat label="Duration" value={`${workout.durationMinutes}m`} />
           </View>
-        </Card>
+        </Tile>
       ))}
       <Card style={styles.notice}>
         <View style={styles.noticeIcon}><Ionicons color={colors.amber} name="construct-outline" size={20} /></View>
         <View style={styles.noticeCopy}>
-          <Text style={styles.noticeTitle}>Capture is still protected</Text>
-          <Text style={styles.noticeText}>Live workout recording stays disabled until BLE and GPS native paths pass parity tests.</Text>
+          <Text style={styles.noticeTitle}>Workout recording unavailable</Text>
+          <Text style={styles.noticeText}>Live workout recording is not enabled yet.</Text>
         </View>
       </Card>
     </Screen>
@@ -61,10 +59,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  badgeRow: { alignItems: 'flex-start' },
-  weekCard: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.lg },
+  weekCard: { alignItems: 'flex-end', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'space-between', paddingBottom: spacing.lg },
   weekLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
-  weekValue: { color: colors.text, fontSize: 38, fontWeight: '700', letterSpacing: -1.4, marginTop: 2 },
+  weekValue: { color: colors.text, fontSize: 38, fontWeight: '700', letterSpacing: 0, marginTop: 2 },
   weekUnit: { color: colors.textMuted, fontSize: 15, fontWeight: '500', letterSpacing: 0 },
   weekStat: { alignItems: 'flex-end' },
   weekStatValue: { color: colors.text, fontSize: 21, fontWeight: '700' },

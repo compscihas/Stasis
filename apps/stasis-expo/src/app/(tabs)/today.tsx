@@ -2,116 +2,87 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
+import { FeelingChoices } from '@/components/feeling-choices';
 import { Screen } from '@/components/screen';
-import { Card, GlassButton, GlassSurface, MetricCard, PreviewBadge, ReadinessRing, ScreenTitle, SectionTitle, TactilePressable } from '@/components/ui';
+import { MetricCard, MetricRow, PreviewBadge, ReadinessRing, ScreenTitle, SectionTitle, TactilePressable, Tile } from '@/components/ui';
 import { currentHeartRate, previewSnapshot } from '@/data/preview-data';
 import { localDayId, type SymptomCheckin } from '@/data/symptom-model';
 import { getSymptomCheckin } from '@/data/symptom-repository';
-import { colors, radius, spacing, typography } from '@/design/tokens';
-
-function formatSleep(minutes: number | null) {
-  if (minutes == null) return '—';
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-function formatInteger(value: number | null) {
-  if (value == null) return '—';
-  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
+import { colors, radius, spacing } from '@/design/tokens';
 
 export default function TodayScreen() {
   const snapshot = previewSnapshot;
   const [checkin, setCheckin] = useState<SymptomCheckin | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const dayId = localDayId();
   useFocusEffect(useCallback(() => {
-    getSymptomCheckin(localDayId()).then(setCheckin).catch((error: unknown) => console.warn('[today-checkin] load failed', error));
-  }, []));
+    let active = true;
+    getSymptomCheckin(dayId).then((value) => {
+      if (active) { setCheckin(value); setLoadError(false); }
+    }).catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [dayId]));
 
-  const feeling = checkin?.status === 'normal'
-    ? 'Feeling normal today'
-    : checkin?.status === 'off'
-      ? 'You reported feeling off'
-      : checkin?.status === 'sick'
-        ? 'You reported feeling sick'
-        : 'How are you feeling?';
   return (
     <Screen>
       <ScreenTitle action={<PreviewBadge />}>Today</ScreenTitle>
-
-      <Card style={styles.hero}>
-        <ReadinessRing value={snapshot.readiness} />
-        <Text style={styles.heroHeadline}>Your body looks steady.</Text>
-        <Text style={styles.heroBody}>Keep the day controlled and leave room for recovery tonight.</Text>
-        <View style={styles.heroPills}>
-          <GlassSurface clear style={styles.heroPill}>
-            <Ionicons color={colors.purple} name="moon" size={15} />
-            <Text style={styles.heroPillText}>{formatSleep(snapshot.sleepMinutes)} sleep</Text>
-          </GlassSurface>
-          <GlassSurface clear style={styles.heroPill}>
-            <Ionicons color={colors.coral} name="pulse" size={15} />
-            <Text style={styles.heroPillText}>{snapshot.strain ?? '—'} strain</Text>
-          </GlassSurface>
-        </View>
-      </Card>
-
-      <SectionTitle>Vitals</SectionTitle>
-      <View style={styles.metricRow}>
-        <MetricCard icon="pulse-outline" label="HRV" value={`${snapshot.hrv ?? '—'}`} unit="ms" accent={colors.mint} />
-        <MetricCard icon="heart-outline" label="Current HR" value={`${currentHeartRate ?? '—'}`} unit="bpm" accent={colors.coral} />
-      </View>
-      <View style={styles.metricRow}>
-        <MetricCard icon="footsteps-outline" label="Steps" value={formatInteger(snapshot.steps)} accent={colors.cyan} />
-        <MetricCard icon="flash-outline" label="Stress" value={`${snapshot.stress ?? '—'}`} unit="/100" accent={colors.amber} />
+      <View style={styles.readiness}>
+        <ReadinessRing compact value={snapshot.readiness} />
+        <View style={styles.copy}><Text style={styles.readinessTitle}>Readiness</Text><Text style={styles.muted}>Steady today</Text></View>
       </View>
 
-      <SectionTitle>Insights</SectionTitle>
-      <Card style={styles.insightCard}>
-        <View style={styles.insightTop}>
-          <GlassSurface clear style={styles.insightIcon}>
-            <Ionicons color={colors.cyan} name="sparkles" size={20} />
-          </GlassSurface>
-          <View style={styles.insightCopy}>
-            <Text style={styles.insightKicker}>Stasis Coach</Text>
-            <Text style={styles.insightTitle}>A quiet day fits your current recovery.</Text>
-          </View>
+      <Tile style={styles.checkin}>
+        <View style={styles.row}>
+          <Ionicons color={colors.blue} name="shield-checkmark-outline" size={23} />
+          <Text style={styles.checkinTitle}>Illness Watch</Text>
+          <TactilePressable accessibilityLabel="Review illness check-in" onPress={() => router.push('/illness')} style={styles.review}><Ionicons color={colors.textMuted} name="ellipsis-horizontal" size={21} /></TactilePressable>
         </View>
-        <GlassButton icon="arrow-forward" onPress={() => router.push('/coach')}>Ask Coach</GlassButton>
-      </Card>
+        <Text style={styles.question}>How are you feeling?</Text>
+        <FeelingChoices value={checkin?.status ?? null} onChange={(status) => router.push({ pathname: '/illness', params: { feeling: status } })} />
+        <View style={styles.checkinFooter}>
+          <Text style={styles.meta}>{loadError ? 'Check-in unavailable. Tap to retry.' : checkin ? 'Checked in today' : 'Not checked in today'}</Text>
+          <Text style={styles.meta}>Wearable analysis not yet enabled</Text>
+        </View>
+      </Tile>
 
-      <TactilePressable onPress={() => router.push('/illness')}>
-        <Card style={styles.illnessCard}>
-          <View style={styles.illnessIcon}>
-            <Ionicons color={checkin?.status === 'normal' ? colors.mint : colors.amber} name="medical-outline" size={21} />
-          </View>
-          <View style={styles.insightCopy}>
-            <Text style={styles.illnessKicker}>Illness Watch</Text>
-            <Text style={styles.illnessTitle}>{feeling}</Text>
-            <Text style={styles.illnessMeta}>{checkin ? 'Tap to review today’s check-in' : 'A quick check-in improves personalization'}</Text>
-          </View>
-          <Ionicons color={colors.textFaint} name="chevron-forward" size={18} />
-        </Card>
+      <View>
+        <SectionTitle>Today's vitals</SectionTitle>
+        <MetricRow accent={colors.coral} icon="heart" label="Current heart rate" value={String(currentHeartRate ?? '\u2014')} unit="bpm" />
+        <MetricRow accent={colors.cyan} icon="pulse" label="HRV" value={String(snapshot.hrv ?? '\u2014')} unit="ms" />
+        <MetricRow accent={colors.mint} icon="footsteps" label="Steps" value={snapshot.steps?.toLocaleString() ?? '\u2014'} />
+        <MetricRow accent={colors.amber} icon="flash-outline" label="Stress" value={String(snapshot.stress ?? '\u2014')} unit="/100" />
+      </View>
+
+      <View style={styles.summary}>
+        <SectionTitle>Sleep & strain</SectionTitle>
+        <View style={styles.row}>
+          <MetricCard accent={colors.purple} icon="moon" label="Sleep" value={snapshot.sleepMinutes == null ? '\u2014' : `${Math.floor(snapshot.sleepMinutes / 60)}h ${snapshot.sleepMinutes % 60}m`} />
+          <MetricCard accent={colors.coral} icon="fitness" label="Strain" value={String(snapshot.strain ?? '\u2014')} />
+        </View>
+      </View>
+
+      <TactilePressable onPress={() => router.push('/coach')} style={styles.coach}>
+        <Ionicons color={colors.blue} name="chatbubble-outline" size={25} />
+        <View style={styles.copy}><Text style={styles.coachTitle}>Stasis Coach</Text><Text style={styles.muted}>A quiet day fits your current recovery.</Text></View>
+        <Ionicons color={colors.textMuted} name="chevron-forward" size={18} />
       </TactilePressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: 'center', overflow: 'hidden', paddingBottom: spacing.lg, paddingTop: spacing.lg },
-  heroHeadline: { color: colors.text, ...typography.title2, marginTop: spacing.lg, textAlign: 'center' },
-  heroBody: { color: colors.textMuted, ...typography.body, marginTop: spacing.xs, maxWidth: 300, textAlign: 'center' },
-  heroPills: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  heroPill: { alignItems: 'center', borderCurve: 'continuous', borderRadius: radius.pill, flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: 9 },
-  heroPillText: { color: colors.text, fontSize: 12, fontWeight: '600' },
-  metricRow: { flexDirection: 'row', gap: spacing.sm },
-  insightCard: { gap: spacing.md },
-  insightTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
-  insightIcon: { alignItems: 'center', borderCurve: 'continuous', borderRadius: radius.md, height: 46, justifyContent: 'center', width: 46 },
-  insightCopy: { flex: 1 },
-  insightKicker: { color: colors.cyan, fontSize: 12, fontWeight: '600' },
-  insightTitle: { color: colors.text, fontSize: 17, fontWeight: '600', lineHeight: 23, marginTop: 3 },
-  illnessCard: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
-  illnessIcon: { alignItems: 'center', backgroundColor: colors.surfaceRaised, borderRadius: radius.md, height: 46, justifyContent: 'center', width: 46 },
-  illnessKicker: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  illnessTitle: { color: colors.text, fontSize: 16, fontWeight: '600', marginTop: 2 },
-  illnessMeta: { color: colors.textMuted, fontSize: 11, marginTop: 3 },
+  readiness: { alignItems: 'center', backgroundColor: colors.mintFill, borderRadius: radius.md, flexDirection: 'row', gap: spacing.md, padding: spacing.md },
+  copy: { flex: 1, minWidth: 0 },
+  readinessTitle: { color: colors.text, fontSize: 19, fontWeight: '600', marginBottom: 4 },
+  muted: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  row: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  checkin: { gap: spacing.md },
+  checkinTitle: { color: colors.text, flex: 1, fontSize: 16, fontWeight: '600' },
+  review: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44, marginVertical: -10 },
+  question: { color: colors.textMuted, fontSize: 14 },
+  checkinFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  meta: { color: colors.textMuted, fontSize: 11, lineHeight: 16 },
+  summary: { gap: spacing.sm },
+  coach: { alignItems: 'center', borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, flexDirection: 'row', gap: spacing.md, padding: spacing.md },
+  coachTitle: { color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 },
 });

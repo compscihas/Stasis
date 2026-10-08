@@ -19,14 +19,6 @@ export default function SleepScreen() {
   return (
     <Screen>
       <ScreenTitle action={<PreviewBadge />}>Sleep</ScreenTitle>
-      <GlassSurface style={styles.segmented}>
-        {['Day', 'Week', 'Month', '6M'].map((label, index) => (
-          <View key={label} style={[styles.segment, index === 0 && styles.segmentActive]}>
-            <Text style={[styles.segmentText, index === 0 && styles.segmentTextActive]}>{label}</Text>
-          </View>
-        ))}
-      </GlassSurface>
-
       <Card style={styles.hero}>
         <View style={styles.heroHeader}>
           <View>
@@ -51,7 +43,7 @@ export default function SleepScreen() {
       </Card>
 
       <SectionTitle>Sleep stages</SectionTitle>
-      <Card>
+      <Card style={styles.stages}>
         {previewSleep.map((segment) => (
           <View key={segment.stage} style={styles.stageRow}>
             <View style={[styles.stageDot, { backgroundColor: stageColor[segment.stage] }]} />
@@ -77,15 +69,11 @@ export default function SleepScreen() {
 }
 
 const styles = StyleSheet.create({
-  segmented: { borderCurve: 'continuous', borderRadius: radius.pill, flexDirection: 'row', padding: 4 },
-  segment: { alignItems: 'center', borderCurve: 'continuous', borderRadius: radius.pill, flex: 1, paddingVertical: 9 },
-  segmentActive: { backgroundColor: colors.controlFillStrong },
-  segmentText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  segmentTextActive: { color: colors.text },
-  hero: { paddingVertical: spacing.lg },
+  hero: { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: spacing.lg },
+  stages: { gap: 0 },
   heroHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   heroLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
-  heroValue: { color: colors.text, fontSize: 42, fontWeight: '700', letterSpacing: -1.7, marginTop: 2 },
+  heroValue: { color: colors.text, fontSize: 42, fontWeight: '700', letterSpacing: 0, marginTop: 2 },
   heroUnit: { color: colors.textMuted, fontSize: 16, fontWeight: '500', letterSpacing: 0 },
   efficiency: { alignItems: 'flex-end' },
   efficiencyValue: { color: colors.mint, fontSize: 23, fontWeight: '700', marginTop: 3 },
@@ -98,7 +86,7 @@ const styles = StyleSheet.create({
   stageTrack: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, flex: 1, height: 7, overflow: 'hidden' },
   stageFill: { borderRadius: radius.pill, height: '100%' },
   stageMinutes: { color: colors.textMuted, fontSize: 12, textAlign: 'right', width: 38 },
-  guidance: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  guidance: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', gap: spacing.md, paddingTop: spacing.md },
   guidanceIcon: { alignItems: 'center', borderCurve: 'continuous', borderRadius: radius.md, height: 48, justifyContent: 'center', width: 48 },
   guidanceCopy: { flex: 1 },
   guidanceTitle: { color: colors.text, fontSize: 15, fontWeight: '600', lineHeight: 21, marginTop: 4 },

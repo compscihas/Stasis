@@ -1,46 +1,36 @@
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabSymbol } from '@/components/tab-symbol';
 import { GlassSurface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 
-const tabBarShadow = Platform.OS === 'web'
-  ? ({ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' } as ViewStyle)
-  : ({ shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24 } as ViewStyle);
-
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-        tabBarActiveTintColor: colors.blue,
-        tabBarActiveBackgroundColor: colors.controlFill,
+        tabBarActiveTintColor: colors.mint,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarBackground: () => <GlassSurface style={{ flex: 1 }} />,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: 'transparent',
+          backgroundColor: colors.surfaceSolid,
           borderColor: colors.border,
           borderCurve: 'continuous',
-          borderRadius: 34,
           borderTopWidth: StyleSheet.hairlineWidth,
-          bottom: 22,
-          height: 64,
-          left: 20,
-          overflow: 'hidden',
-          paddingBottom: 6,
+          height: 64 + insets.bottom,
+          paddingBottom: Math.max(6, insets.bottom),
           paddingHorizontal: 6,
           paddingTop: 6,
-          position: 'absolute',
-          right: 20,
-          ...tabBarShadow,
         },
         tabBarIcon: ({ color, focused, size }) => {
           return <TabSymbol color={color} focused={focused} route={route.name} size={size} />;
         },
-        tabBarItemStyle: { borderRadius: 22 },
+        tabBarItemStyle: { minWidth: 0 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       })}
     >

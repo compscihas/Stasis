@@ -42,7 +42,7 @@ export default function CoachScreen() {
         <View style={styles.header}>
           <IconButton accessibilityLabel="Close Coach" icon="close" onPress={() => router.back()} />
           <View style={styles.titleWrap}>
-            <Text style={styles.kicker}>PRIVATE WELLNESS ASSISTANT</Text>
+            <Text style={styles.kicker}>Stasis AI</Text>
             <Text style={styles.title}>Stasis Coach</Text>
           </View>
           <IconButton accessibilityLabel="Coach server settings" icon="settings-outline" onPress={() => router.push('/coach-settings')} />
@@ -79,7 +79,7 @@ export default function CoachScreen() {
             style={styles.input}
             value={draft}
           />
-          <TactilePressable disabled={!draft.trim() || sending} haptic="light" onPress={send} style={[styles.send, (!draft.trim() || sending) && styles.sendDisabled]}>
+          <TactilePressable accessibilityLabel="Send message" disabled={!draft.trim() || sending} haptic="light" onPress={send} style={[styles.send, (!draft.trim() || sending) && styles.sendDisabled]}>
             <Ionicons color="#FFFFFF" name="arrow-up" size={20} />
           </TactilePressable>
         </GlassSurface>
@@ -92,24 +92,24 @@ export default function CoachScreen() {
 const styles = StyleSheet.create({
   root: { backgroundColor: colors.background, flex: 1, overflow: 'hidden' },
   safe: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: spacing.md },
-  header: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm },
+  container: { alignSelf: 'center', flex: 1, maxWidth: 680, paddingHorizontal: 20, width: '100%' },
+  header: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: spacing.md, paddingBottom: spacing.md, paddingTop: spacing.md },
   titleWrap: { flex: 1, minWidth: 0 },
-  kicker: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.6 },
-  title: { color: colors.text, fontSize: 28, fontWeight: '700', letterSpacing: 0.36, marginTop: 2 },
+  kicker: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0 },
+  title: { color: colors.text, fontSize: 28, fontWeight: '700', letterSpacing: 0, marginTop: 2 },
   messages: { flexGrow: 1, gap: spacing.md, justifyContent: 'flex-end', paddingBottom: spacing.lg, paddingTop: spacing.md },
   coachText: { color: colors.text, fontSize: 17, lineHeight: 25 },
   disclosure: { color: colors.amber, fontSize: 12, lineHeight: 18, marginTop: spacing.md },
   bubble: { borderRadius: radius.md, maxWidth: '88%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   assistantBubble: { alignSelf: 'flex-start', backgroundColor: colors.glassStrong, borderColor: colors.border, borderWidth: 1 },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: colors.blue },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: colors.blueFillStrong },
   messageText: { color: colors.text, fontSize: 17, lineHeight: 22 },
   userMessageText: { color: '#FFFFFF', fontSize: 17, lineHeight: 22 },
   errorCard: { alignSelf: 'stretch', backgroundColor: colors.dangerFill, borderColor: colors.danger, borderRadius: radius.sm, borderWidth: 1, padding: spacing.md },
   errorText: { color: colors.text, fontSize: 13, lineHeight: 19 },
   errorLink: { color: colors.peach, fontSize: 12, fontWeight: '800', marginTop: spacing.xs },
-  composer: { alignItems: 'flex-end', borderRadius: 28, flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm, overflow: 'hidden', padding: spacing.sm },
+  composer: { alignItems: 'flex-end', borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm, overflow: 'hidden', padding: spacing.sm },
   input: { color: colors.text, flex: 1, fontSize: 16, maxHeight: 120, minHeight: 42, paddingHorizontal: spacing.sm, paddingTop: 10 },
-  send: { alignItems: 'center', backgroundColor: colors.blue, borderRadius: radius.pill, height: 42, justifyContent: 'center', width: 42 },
+  send: { alignItems: 'center', backgroundColor: colors.blueFillStrong, borderRadius: radius.pill, height: 42, justifyContent: 'center', width: 42 },
   sendDisabled: { opacity: 0.35 },
 });

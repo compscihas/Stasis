@@ -66,7 +66,7 @@ export default function CoachSettingsScreen() {
           <View style={styles.header}>
             <IconButton accessibilityLabel="Close settings" icon="close" onPress={() => router.back()} />
             <View style={styles.title}>
-              <Text style={styles.kicker}>PRIVATE CONNECTION</Text>
+              <Text style={styles.kicker}>Stasis AI</Text>
               <Text style={styles.heading}>Coach server</Text>
             </View>
           </View>
@@ -102,7 +102,7 @@ function Field({ label, ...props }: FieldProps) {
   return (
     <View style={styles.field}>
       <Eyebrow>{label}</Eyebrow>
-      <TextInput placeholderTextColor={colors.textMuted} style={styles.input} {...props} />
+      <TextInput accessibilityLabel={label} placeholderTextColor={colors.textMuted} style={styles.input} {...props} />
     </View>
   );
 }
@@ -111,8 +111,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   title: { flex: 1 },
-  kicker: { color: colors.cyan, fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
-  heading: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.7, marginTop: 2 },
+  kicker: { color: colors.cyan, fontSize: 10, fontWeight: '800', letterSpacing: 0 },
+  heading: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: 0, marginTop: 2 },
   form: { gap: spacing.md },
   field: { gap: spacing.xs },
   input: { backgroundColor: colors.controlFill, borderColor: colors.border, borderCurve: 'continuous', borderRadius: radius.sm, borderWidth: 1, color: colors.text, fontSize: 15, paddingHorizontal: spacing.md, paddingVertical: 13 },

@@ -56,7 +56,7 @@ export default function RootLayout() {
         <Stack.Screen name="coach-settings" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.78, 1], sheetCornerRadius: 28, sheetGrabberVisible: true, sheetInitialDetentIndex: 'last' }} />
         <Stack.Screen name="illness" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.9, 1], sheetCornerRadius: 28, sheetGrabberVisible: true, sheetInitialDetentIndex: 'last' }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
     </ThemeProvider>
   );
 }
